@@ -1,13 +1,27 @@
 import SwiftUI
 import AppKit
 
+struct TrafficLightButton: View {
+    let color: Color
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Circle()
+                .fill(color)
+                .frame(width: 12, height: 12)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     var window: NSWindow!
     private var initialDosesAdded = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let windowSize = (width: 400.0, height: 700.0)
+        let windowSize = (width: 400.0, height: 650.0)
         
         window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: windowSize.width, height: windowSize.height),
@@ -66,6 +80,23 @@ struct KoffeeContentView: View {
                 .padding(20)
             }
         }
+        .background(.ultraThinMaterial)
+        .clipShape(.rect(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(.white.opacity(0.3), lineWidth: 1)
+        )
+        .gesture(
+            DragGesture(minimumDistance: 1)
+                .onChanged { value in
+                    let dragDistance = value.translation
+                    let currentOrigin = window.frame.origin
+                    window.setFrameOrigin(CGPoint(
+                        x: currentOrigin.x + dragDistance.width,
+                        y: currentOrigin.y - dragDistance.height
+                    ))
+                }
+        )
         .onAppear { onAppear() }
         .onAppear { updateCaffeineLevel() }
         .onChange(of: config.doses) { _ in updateCaffeineLevel() }
@@ -166,11 +197,11 @@ struct KoffeeContentView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Koffee")
                     .font(.system(size: 24, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 
                 Text("\(Int(caffeineAtBedtime))mg at bedtime")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(.secondary)
             }
             
             Spacer()
@@ -180,31 +211,13 @@ struct KoffeeContentView: View {
         .padding(12)
         .glassEffect(.regular, in: .rect(cornerRadius: 16))
         .frame(maxWidth: .infinity)
-        .contentShape(Rectangle())
-        .gesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in 
-                    window.perform(Selector(("performDragWithEvent:")), with: NSApp.currentEvent)
-                }
-        )
     }
     
     private var trafficLights: some View {
         HStack(spacing: 8) {
-            Circle()
-                .fill(Color(red: 1, green: 0.43, blue: 0.43))
-                .frame(width: 12, height: 12)
-                .onTapGesture { window.close() }
-            
-            Circle()
-                .fill(Color(red: 1, green: 0.8, blue: 0.35))
-                .frame(width: 12, height: 12)
-                .onTapGesture { window.miniaturize(nil) }
-            
-            Circle()
-                .fill(Color(red: 0.35, green: 0.78, blue: 0.35))
-                .frame(width: 12, height: 12)
-                .onTapGesture { window.zoom(nil) }
+            TrafficLightButton(color: Color(red: 1, green: 0.43, blue: 0.43), action: { window.close() })
+            TrafficLightButton(color: Color(red: 1, green: 0.8, blue: 0.35), action: { window.miniaturize(nil) })
+            TrafficLightButton(color: Color(red: 0.35, green: 0.78, blue: 0.35), action: { window.zoom(nil) })
         }
         .padding(8)
         .glassEffect(.regular, in: .capsule)
@@ -433,7 +446,7 @@ struct DoseRowView: View {
             Button(action: onRemove) {
                 Image(systemName: "minus.circle.fill")
                     .font(.system(size: 18))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(.secondary.opacity(0.6))
             }
             .buttonStyle(.plain)
         }
