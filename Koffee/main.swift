@@ -36,8 +36,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.isOpaque = false
         window.backgroundColor = .clear
         window.hasShadow = true
-        window.minSize = NSSize(width: 360, height: 550)
-        window.maxSize = NSSize(width: 500, height: 800)
+        window.minSize = NSSize(width: 360, height: 600)
+        window.maxSize = NSSize(width: 500, height: 900)
         window.contentView = NSHostingView(rootView: KoffeeContentView(onAppear: addInitialDoses, window: window))
         window.makeKeyAndOrderFront(nil)
     }
@@ -61,7 +61,25 @@ struct KoffeeContentView: View {
     @ObservedObject private var beverages = BeverageManager.shared
 
     @State private var caffeineAtBedtime: Double = 0
-    @State private var bubbleSeeds: [Int] = (0..<20).map { _ in Int.random(in: 0...10000) }
+    @State private var bubbleSeeds: [Int] = (0..<30).map { _ in Int.random(in: 0...10000) }
+    @State private var bubbleStates: [BubbleState] = (0..<30).map { i in
+        let seed = Int.random(in: 0...10000)
+        return BubbleState(
+            x: CGFloat(seed % 360) + 20,
+            baseY: CGFloat((seed / 100) % 400) + 20,
+            size: CGFloat(4 + (seed % 7)),
+            phase: Double(i) * 0.3,
+            wobblePhase: Double(i) * 0.7
+        )
+    }
+    
+    private struct BubbleState {
+        var x: CGFloat
+        var baseY: CGFloat
+        var size: CGFloat
+        var phase: Double
+        var wobblePhase: Double
+    }
 
     var safeLimit: Double {
         config.sensitivity.safeCaffeineAtBedtime
@@ -164,26 +182,34 @@ struct KoffeeContentView: View {
                     endPoint: CGPoint(x: 0, y: surfaceY + 40)
                 ))
                 
-                for i in 0..<20 {
-                    guard liquidHeight > 60 else { continue }
-                    let seed = bubbleSeeds[i]
-                    let bubbleX = CGFloat(seed % Int(size.width - 40)) + 20
-                    let baseStartY = CGFloat((seed / 100) % Int(liquidHeight - 60)) + 30
-                    let startY = surfaceY + baseStartY
-                    let cycleTime = 60.0
-                    let progress = (time.truncatingRemainder(dividingBy: cycleTime)) / cycleTime
-                    let bubbleY = startY - progress * (liquidHeight * 0.7)
-                    let bubbleSize = CGFloat(4 + (seed % 7))
-                    let wobble = sin(time * 0.1 + CGFloat(seed)) * 0.5
+                for i in 0..<30 {
+                    guard liquidHeight > 80 else { continue }
+                    let bubble = bubbleStates[i]
                     
-                    if bubbleY > surfaceY {
+                    let cycleTime = 8.0
+                    let elapsedTime = time + bubble.phase
+                    let progress = elapsedTime.truncatingRemainder(dividingBy: cycleTime) / cycleTime
+                    
+                    let startY = surfaceY + bubble.baseY
+                    let riseDistance = liquidHeight * 0.85
+                    let currentY = startY - (progress * riseDistance)
+                    
+                    let viscosityDamping = exp(-progress * 2.0)
+                    let wobbleAmplitude = 1.5 * viscosityDamping
+                    let wobbleFreq = 0.8
+                    let wobble = sin(time * wobbleFreq + bubble.wobblePhase) * wobbleAmplitude
+                    
+                    let currentX = bubble.x + wobble
+                    
+                    if currentY > surfaceY && currentY < size.height {
+                        let alpha = min(0.35, 0.35 * viscosityDamping + 0.1)
                         let bubblePath = Circle().path(in: CGRect(
-                            x: bubbleX + wobble,
-                            y: bubbleY,
-                            width: bubbleSize,
-                            height: bubbleSize
+                            x: currentX,
+                            y: currentY,
+                            width: bubble.size,
+                            height: bubble.size
                         ))
-                        context.fill(bubblePath, with: .color(.white.opacity(0.25)))
+                        context.fill(bubblePath, with: .color(.white.opacity(Double(alpha))))
                     }
                 }
             }
@@ -262,11 +288,13 @@ struct KoffeeContentView: View {
                 .foregroundStyle(.secondary)
             
             HStack {
-                TextField("", value: $config.weight, format: .number)
+                TextField("kg", value: $config.weight, format: .number)
                     .textFieldStyle(.plain)
                     .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(.primary)
+                    .multilineTextAlignment(.leading)
                     .frame(width: 60)
+                    .focusable()
                 
                 Text("kg")
                     .font(.system(size: 14, weight: .medium))
@@ -286,18 +314,11 @@ struct KoffeeContentView: View {
             
             HStack(spacing: 8) {
                 ForEach(Sensitivity.allCases) { sens in
-                    Button {
-                        config.sensitivity = sens
-                    } label: {
-                        Text(sens.displayName.prefix(1))
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(config.sensitivity == sens ? .white : .secondary)
-                            .frame(width: 44, height: 44)
-                            .background(config.sensitivity == sens ? Color.orange : Color.clear)
-                            .clipShape(.rect(cornerRadius: 10))
-                    }
-                    .buttonStyle(.plain)
-                    .glassEffect(.regular, in: .rect(cornerRadius: 10))
+                    SensitivityButton(
+                        sensitivity: sens,
+                        isSelected: config.sensitivity == sens,
+                        action: { config.sensitivity = sens }
+                    )
                 }
             }
         }
@@ -314,6 +335,7 @@ struct KoffeeContentView: View {
                 .datePickerStyle(.compact)
                 .labelsHidden()
                 .padding(12)
+                .focusable()
                 .glassEffect(.regular, in: .rect(cornerRadius: 10))
         }
         .frame(maxWidth: .infinity)
@@ -329,6 +351,7 @@ struct KoffeeContentView: View {
                 .datePickerStyle(.compact)
                 .labelsHidden()
                 .padding(12)
+                .focusable()
                 .glassEffect(.regular, in: .rect(cornerRadius: 10))
         }
         .frame(maxWidth: .infinity)
@@ -369,7 +392,7 @@ struct KoffeeContentView: View {
                 let defaultTime = Calendar.current.date(byAdding: .hour, value: 4, to: config.wakeTime) ?? config.wakeTime
                 config.doses.append(ConfigManager.UserDose(time: defaultTime, beverageIndex: 0))
             } label: {
-                Label("Add Dose", systemImage: "plus.circle.fill")
+                Label("Add Cup", systemImage: "plus.circle.fill")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -434,6 +457,7 @@ struct DoseRowView: View {
                 .datePickerStyle(.compact)
                 .labelsHidden()
                 .frame(width: 80)
+                .focusable()
             
             Picker("", selection: $dose.beverageIndex) {
                 ForEach(Array(beverages.enumerated()), id: \.offset) { index, beverage in
@@ -452,6 +476,25 @@ struct DoseRowView: View {
         }
         .padding(12)
         .glassEffect(.regular, in: .rect(cornerRadius: 12))
+    }
+}
+
+struct SensitivityButton: View {
+    let sensitivity: Sensitivity
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(sensitivity.displayName.prefix(1))
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(isSelected ? .white : .secondary)
+                .frame(width: 44, height: 44)
+                .background(isSelected ? Color.orange : Color.clear)
+                .clipShape(.rect(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .glassEffect(.regular, in: .rect(cornerRadius: 10))
     }
 }
 
