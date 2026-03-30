@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		295BA1E91D05F18A94A9B136 /* config.json in Resources */ = {isa = PBXBuildFile; fileRef = 6DDE676D391102A037E2B315 /* config.json */; };
 		303DC01E0D86D28DA483E3FB /* beverages.json in Resources */ = {isa = PBXBuildFile; fileRef = AEE29E5F6955FCD217F979DA /* beverages.json */; };
+		430DF6D927B801F31C9CDF91 /* Design.swift in Sources */ = {isa = PBXBuildFile; fileRef = F99F13FA86A4F2647EF46C1A /* Design.swift */; };
 		51127499C6C678181549D11A /* ConfigManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD54509E672E4950D2F2508 /* ConfigManager.swift */; };
 		55DC42015ABA46706A8D4158 /* CaffeineCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B66235F2B73372234391FDA /* CaffeineCalculator.swift */; };
 		5EBC1529330648E1A4B7D32A /* CaffeineMeterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE1CCCF6A9602672053A5029 /* CaffeineMeterView.swift */; };
@@ -27,6 +28,7 @@
 		CBD54509E672E4950D2F2508 /* ConfigManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigManager.swift; sourceTree = "<group>"; };
 		DE1CCCF6A9602672053A5029 /* CaffeineMeterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaffeineMeterView.swift; sourceTree = "<group>"; };
 		EAD12614A013A9506F4C6D1D /* BeverageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BeverageManager.swift; sourceTree = "<group>"; };
+		F99F13FA86A4F2647EF46C1A /* Design.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -47,6 +49,7 @@
 				DE1CCCF6A9602672053A5029 /* CaffeineMeterView.swift */,
 				6DDE676D391102A037E2B315 /* config.json */,
 				CBD54509E672E4950D2F2508 /* ConfigManager.swift */,
+				F99F13FA86A4F2647EF46C1A /* Design.swift */,
 				B827BC801C03CBC40FA0E3C3 /* main.swift */,
 				9AAC833F35DCB98520DB8FA3 /* Models.swift */,
 			);
@@ -133,6 +136,7 @@
 				55DC42015ABA46706A8D4158 /* CaffeineCalculator.swift in Sources */,
 				5EBC1529330648E1A4B7D32A /* CaffeineMeterView.swift in Sources */,
 				51127499C6C678181549D11A /* ConfigManager.swift in Sources */,
+				430DF6D927B801F31C9CDF91 /* Design.swift in Sources */,
 				ED661C016DCDD640834AB69F /* Models.swift in Sources */,
 				7F65043F0D5695188B559561 /* main.swift in Sources */,
 			);

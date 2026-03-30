@@ -65,19 +65,19 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
-                VStack(spacing: 6) {
+                VStack(spacing: KoffeeSpacing.sectionSpacing) {
                     bodySection
                     scheduleSection
                     meterSection
                     dosesSection
                 }
-                .padding(10)
+                .padding(KoffeeSpacing.l)
             }
-            .background(Color(white: 0.08))
+            .background(KoffeeColor.background)
             
             optimizeButton
-                .padding(10)
-                .background(Color(white: 0.08))
+                .padding(KoffeeSpacing.l)
+                .background(KoffeeColor.background)
         }
         .onAppear { onAppear() }
         .onAppear { updateCaffeineLevel() }
@@ -89,40 +89,45 @@ struct ContentView: View {
     }
 
     private var bodySection: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: KoffeeSpacing.xs) {
             Text("BODY")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundColor(.secondary)
+                .font(KoffeeFont.sectionLabel)
+                .foregroundColor(KoffeeColor.secondary)
 
-            HStack(spacing: 6) {
+            HStack(spacing: KoffeeSpacing.s) {
                 GlassCard {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("kg")
-                            .font(.system(size: 9))
-                            .foregroundColor(.secondary)
-                        TextField("", value: $config.weight, format: .number)
-                            .textFieldStyle(.plain)
-                            .font(.system(size: 14, weight: .bold))
-                            .frame(width: 40)
+                    VStack(alignment: .leading, spacing: KoffeeSpacing.xs) {
+                        Text("Weight")
+                            .font(KoffeeFont.fieldLabel)
+                            .foregroundColor(KoffeeColor.secondary)
+                        HStack(spacing: KoffeeSpacing.xs) {
+                            TextField("", value: $config.weight, format: .number)
+                                .textFieldStyle(.plain)
+                                .font(KoffeeFont.input)
+                                .frame(width: 50)
+                            Text("kg")
+                                .font(KoffeeFont.fieldLabel)
+                                .foregroundColor(KoffeeColor.secondary)
+                        }
                     }
                 }
 
                 GlassCard {
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: KoffeeSpacing.xs) {
                         Text("Sensitivity")
-                            .font(.system(size: 9))
-                            .foregroundColor(.secondary)
-                        HStack(spacing: 3) {
+                            .font(KoffeeFont.fieldLabel)
+                            .foregroundColor(KoffeeColor.secondary)
+                        HStack(spacing: KoffeeSpacing.xs) {
                             ForEach(Sensitivity.allCases) { sens in
                                 Button {
                                     config.sensitivity = sens
                                 } label: {
                                     Text(sens.displayName.prefix(1))
-                                        .font(.system(size: 11, weight: .bold))
-                                        .foregroundColor(config.sensitivity == sens ? .white : .secondary)
-                                        .frame(width: 26, height: 24)
-                                        .background(config.sensitivity == sens ? Color(hex: "FF9800") : Color.clear)
-                                        .cornerRadius(5)
+                                        .font(KoffeeFont.body)
+                                        .foregroundColor(config.sensitivity == sens ? .white : KoffeeColor.secondary)
+                                        .frame(width: KoffeeTouch.sensitivityButton, height: KoffeeTouch.sensitivityButton)
+                                        .background(config.sensitivity == sens ? KoffeeColor.orange : Color.clear)
+                                        .cornerRadius(KoffeeRadius.small)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -134,17 +139,17 @@ struct ContentView: View {
     }
 
     private var scheduleSection: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: KoffeeSpacing.xs) {
             Text("SCHEDULE")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundColor(.secondary)
+                .font(KoffeeFont.sectionLabel)
+                .foregroundColor(KoffeeColor.secondary)
 
-            HStack(spacing: 6) {
+            HStack(spacing: KoffeeSpacing.s) {
                 GlassCard {
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: KoffeeSpacing.xs) {
                         Text("Wake")
-                            .font(.system(size: 9))
-                            .foregroundColor(.secondary)
+                            .font(KoffeeFont.fieldLabel)
+                            .foregroundColor(KoffeeColor.secondary)
                         DatePicker("", selection: $config.wakeTime, displayedComponents: .hourAndMinute)
                             .labelsHidden()
                             .datePickerStyle(.compact)
@@ -152,10 +157,10 @@ struct ContentView: View {
                 }
 
                 GlassCard {
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: KoffeeSpacing.xs) {
                         Text("Sleep")
-                            .font(.system(size: 9))
-                            .foregroundColor(.secondary)
+                            .font(KoffeeFont.fieldLabel)
+                            .foregroundColor(KoffeeColor.secondary)
                         DatePicker("", selection: $config.sleepTime, displayedComponents: .hourAndMinute)
                             .labelsHidden()
                             .datePickerStyle(.compact)
@@ -170,10 +175,10 @@ struct ContentView: View {
     }
 
     private var dosesSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: KoffeeSpacing.s) {
             Text("DOSE PLAN")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundColor(.secondary)
+                .font(KoffeeFont.sectionLabel)
+                .foregroundColor(KoffeeColor.secondary)
 
             ForEach($config.doses) { $dose in
                 DoseEditorView(
@@ -197,14 +202,13 @@ struct ContentView: View {
             } label: {
                 HStack {
                     Image(systemName: "plus")
-                    Text("Add")
+                    Text("Add Dose")
                 }
-                .font(.system(size: 11))
-                .foregroundColor(.secondary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
+                .font(KoffeeFont.button)
+                .foregroundColor(KoffeeColor.secondary)
+                .frame(maxWidth: .infinity, minHeight: KoffeeTouch.minSize)
                 .background(.ultraThinMaterial)
-                .cornerRadius(5)
+                .cornerRadius(KoffeeRadius.medium)
             }
             .buttonStyle(.plain)
         }
@@ -214,13 +218,15 @@ struct ContentView: View {
         Button {
             config.addOptimalDoses()
         } label: {
-            Text("✨ Optimize")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(Color(hex: "FF9800"))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(.ultraThinMaterial)
-                .cornerRadius(5)
+            HStack {
+                Image(systemName: "sparkles")
+                Text("Optimize")
+            }
+            .font(KoffeeFont.button)
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity, minHeight: KoffeeTouch.buttonHeight)
+            .background(KoffeeColor.orange)
+            .cornerRadius(KoffeeRadius.medium)
         }
         .buttonStyle(.plain)
     }
@@ -244,11 +250,11 @@ struct GlassCard<Content: View>: View {
     }
     var body: some View {
         content()
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.horizontal, KoffeeSpacing.s)
+            .padding(.vertical, KoffeeSpacing.s)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(.ultraThinMaterial)
-            .cornerRadius(5)
+            .cornerRadius(KoffeeRadius.medium)
     }
 }
 
@@ -258,7 +264,7 @@ struct DoseEditorView: View {
     let onRemove: () -> Void
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: KoffeeSpacing.s) {
             DatePicker("", selection: $dose.time, displayedComponents: .hourAndMinute)
                 .labelsHidden()
                 .datePickerStyle(.compact)
@@ -275,19 +281,19 @@ struct DoseEditorView: View {
             .frame(maxWidth: .infinity)
 
             Button(action: onRemove) {
-                Text("−")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.secondary)
-                    .frame(width: 20, height: 20)
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(KoffeeColor.secondary)
+                    .frame(width: KoffeeTouch.smallButton, height: KoffeeTouch.smallButton)
                     .background(.ultraThinMaterial)
                     .clipShape(Circle())
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 4)
+        .padding(.horizontal, KoffeeSpacing.s)
+        .padding(.vertical, KoffeeSpacing.s)
         .background(.ultraThinMaterial)
-        .cornerRadius(4)
+        .cornerRadius(KoffeeRadius.medium)
     }
 }
 
