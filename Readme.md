@@ -1,89 +1,43 @@
 # Koffee
 
-Caffeine intake optimization tool with CLI and UI versions.
+Native macOS caffeine intake optimization app built with SwiftUI.
 
-![Koffee UI](screenshot.png)
-<!-- Take a screenshot of the UI with: ⌘⇧4 then select the window, save as screenshot.png -->
+## Building
+
+```bash
+./build.sh      # Generate Xcode project and build
+./run.sh        # Build and run the app
+```
+
+Or open `Koffee.xcodeproj` in Xcode and press ⌘R to run.
 
 ## Features
 
 - Optimal caffeine dose scheduling based on weight and sensitivity
 - Caffeine half-life modeling for realistic accumulation tracking
-- "How many coffees?" mode - see how many drinks you can have
-- Caffeine level visualization throughout the day
-- Real-time bedtime caffeine meter
+- Real-time bedtime caffeine meter with arc gauge
+- Coffee-tinted glass UI design
 - Config persistence across sessions
-- JSON output for scripting
-- 16 beverages to choose from
-
-## Quick Start
-
-```bash
-# Interactive setup
-python koffee_cli.py
-
-# One-shot with arguments
-python koffee_cli.py --weight 70 --wake 07:00 --sleep 23:00 --sensitivity medium
-
-# Show caffeine levels graph
-python koffee_cli.py --profile
-
-# Show beverage allowance
-python koffee_cli.py --beverages
-
-# JSON output for piping
-python koffee_cli.py --json --weight 70 --wake 07:00 --sleep 23:00 --sensitivity medium
-```
-
-## Installation
-
-### CLI
-```bash
-pip install -r requirements.txt
-```
-
-### UI (Mac)
-```bash
-brew install qt
-pip install PyQt6
-python koffee_ui.py
-```
+- 16 beverages with emoji icons
 
 ## Project Structure
 
 ```
-koffee/
-├── koffee_core.py      # Pure calculation logic, shared by CLI and UI
-├── koffee_cli.py       # Command-line interface with argparse
-├── koffee_ui.py        # PyQt6 GUI application
-├── beverages.json      # Beverage definitions (caffeine content, categories, icons)
-├── requirements.txt    # Python dependencies
-└── tests/
-    └── test_koffee_core.py
-```
-
-## Configuration
-
-User settings are stored in `~/.config/koffee.json`:
-- Weight, sensitivity, wake/sleep times
-- Custom dose plan
-
-## Development
-
-```bash
-# Run tests
-python -m pytest tests/
-
-# Type check
-mypy koffee_core.py koffee_cli.py koffee_ui.py
-
-# Lint
-ruff check .
+Koffee/
+├── main.swift              # App entry point with AppDelegate
+├── Models.swift           # Sensitivity enum, Dose, Beverage structs
+├── CaffeineCalculator.swift # Core algorithm (research-based)
+├── ConfigManager.swift     # Config persistence to ~/.config/koffee.json
+├── BeverageManager.swift  # Load beverages from JSON
+├── ContentView.swift      # Main UI layout
+├── CaffeineMeterView.swift # Arc gauge meter
+├── DoseEditorView.swift   # Dose card with time + beverage picker
+└── beverages.json          # Beverage definitions
 ```
 
 ## Customizing Beverages
 
-Edit `beverages.json` to add, remove, or modify beverages:
+Edit `Koffee/beverages.json` to add, remove, or modify beverages:
 
 ```json
 {
@@ -93,8 +47,14 @@ Edit `beverages.json` to add, remove, or modify beverages:
 }
 ```
 
-Fields:
-- `name`: Display name with portion info
-- `caffeine_mg`: Caffeine content in milligrams
-- `category`: Grouping (Coffee, Tea, Energy, Other)
-- `icon`: Emoji icon for UI display
+## Configuration
+
+User settings are stored in `~/.config/koffee.json`.
+
+## Algorithm
+
+Based on research:
+- Caffeine half-life: ~5 hours
+- First dose: 90 min after waking (aligns with cortisol peak)
+- Sensitivity buffers: High=12h, Medium=9h, Low=6h before bed
+- Safe bedtime caffeine: High=25mg, Medium=50mg, Low=100mg

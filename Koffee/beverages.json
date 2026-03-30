@@ -1,0 +1,20 @@
+{
+  "beverages": [
+    {"name": "Espresso (1 shot, 30ml)", "caffeine_mg": 63, "category": "Coffee", "icon": "☕"},
+    {"name": "Brewed Coffee (240ml)", "caffeine_mg": 95, "category": "Coffee", "icon": "☕"},
+    {"name": "Instant Coffee (240ml)", "caffeine_mg": 62, "category": "Coffee", "icon": "☕"},
+    {"name": "Cold Brew (240ml)", "caffeine_mg": 200, "category": "Coffee", "icon": "☕"},
+    {"name": "Cafe Latte (240ml)", "caffeine_mg": 75, "category": "Coffee", "icon": "☕"},
+    {"name": "Black Tea (240ml)", "caffeine_mg": 47, "category": "Tea", "icon": "🍵"},
+    {"name": "Green Tea (240ml)", "caffeine_mg": 28, "category": "Tea", "icon": "🍵"},
+    {"name": "Oolong Tea (240ml)", "caffeine_mg": 37, "category": "Tea", "icon": "🍵"},
+    {"name": "White Tea (240ml)", "caffeine_mg": 15, "category": "Tea", "icon": "🍵"},
+    {"name": "Cola (355ml)", "caffeine_mg": 40, "category": "Energy", "icon": "🥤"},
+    {"name": "Red Bull (240ml)", "caffeine_mg": 80, "category": "Energy", "icon": "⚡"},
+    {"name": "Monster Energy (240ml)", "caffeine_mg": 160, "category": "Energy", "icon": "⚡"},
+    {"name": "Dark Chocolate (50g)", "caffeine_mg": 25, "category": "Other", "icon": "🍫"},
+    {"name": "Milk Chocolate (50g)", "caffeine_mg": 11, "category": "Other", "icon": "🍫"},
+    {"name": "Mate (240ml)", "caffeine_mg": 85, "category": "Other", "icon": "🧉"},
+    {"name": "Kombucha (240ml)", "caffeine_mg": 20, "category": "Other", "icon": "🥛"}
+  ]
+}

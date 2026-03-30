@@ -1,0 +1,46 @@
+{
+  "window": {
+    "width": 340,
+    "height": 820
+  },
+  "ui_elements": {
+    "titleBar": 28,
+    "contentPadding": 16,
+    "vstackSpacing": 20,
+    "sections": {
+      "body": {
+        "label": {"height": 12, "fontSize": 8},
+        "glassCard": {"height": 38, "paddingH": 6, "paddingV": 4}
+      },
+      "schedule": {
+        "label": {"height": 12, "fontSize": 8},
+        "glassCard": {"height": 34, "paddingH": 6, "paddingV": 4}
+      },
+      "meter": {
+        "arcRadius": 50,
+        "zstackHeight": 55,
+        "statusText": {"height": 14, "fontSize": 10},
+        "mgText": {"height": 10, "fontSize": 8}
+      },
+      "doses": {
+        "label": {"height": 12, "fontSize": 8},
+        "doseEditor": {
+          "datePicker": {"width": 65, "height": 22},
+          "pickerMinWidth": 150,
+          "removeBtn": {"size": 20, "padding": 6}
+        },
+        "addBtn": {"height": 30, "paddingV": 5}
+      },
+      "recommendation": {
+        "textHeight": 13,
+        "padding": 6,
+        "fontSize": 9
+      },
+      "optimize": {
+        "textHeight": 13,
+        "paddingV": 6,
+        "fontSize": 9
+      }
+    }
+  }
+}

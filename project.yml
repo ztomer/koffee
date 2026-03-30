@@ -1,0 +1,39 @@
+name: Koffee
+options:
+  bundleIdPrefix: com.koffee
+  deploymentTarget:
+    macOS: "13.0"
+  xcodeVersion: "15.0"
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    PRODUCT_NAME: Koffee
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "13.0"
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGN_ENTITLEMENTS: ""
+    INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.healthcare-fitness"
+
+targets:
+  Koffee:
+    type: application
+    platform: macOS
+    sources:
+      - path: Koffee
+        excludes:
+          - "*.xcodeproj"
+          - "*.xcworkspace"
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: "YES"
+        INFOPLIST_KEY_NSMainNibFile: ""
+        INFOPLIST_KEY_NSPrincipalClass: "NSApplication"
+        INFOPLIST_KEY_CFBundleName: "Koffee"
+        INFOPLIST_KEY_LSUIElement: "NO"
+        INFOPLIST_KEY_NSHighResolutionCapable: "YES"
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
+        COMBINE_HIDPI_IMAGES: "YES"
