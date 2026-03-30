@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 class ConfigManager: ObservableObject {
     static let shared = ConfigManager()
 

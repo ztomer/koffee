@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 class BeverageManager: ObservableObject {
     static let shared = BeverageManager()
 
