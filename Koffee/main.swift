@@ -1,5 +1,28 @@
 import SwiftUI
 import AppKit
+import Foundation
+
+let debugLogURL = URL(fileURLWithPath: "/tmp/koffee.log")
+
+func debugLog(_ msg: String) {
+    let timestamp = ISO8601DateFormatter().string(from: Date())
+    let line = "[\(timestamp)] \(msg)\n"
+    if let data = line.data(using: .utf8) {
+        if FileManager.default.fileExists(atPath: debugLogURL.path) {
+            if let handle = try? FileHandle(forWritingTo: debugLogURL) {
+                handle.seekToEndOfFile()
+                handle.write(data)
+                try? handle.close()
+            }
+        } else {
+            try? data.write(to: debugLogURL)
+        }
+    }
+}
+
+func clearDebugLog() {
+    try? FileManager.default.removeItem(at: debugLogURL)
+}
 
 struct TrafficLightButton: View {
     let color: Color
@@ -12,6 +35,160 @@ struct TrafficLightButton: View {
                 .frame(width: 12, height: 12)
         }
         .buttonStyle(.plain)
+    }
+}
+
+struct BubbleState {
+    var x: CGFloat
+    var baseY: CGFloat
+    var size: CGFloat
+    var phase: Double
+    var wobblePhase: Double
+}
+
+struct LiquidPhysics {
+    static let accelerationDecay: CGFloat = 0.92
+    static let tiltResponse: CGFloat = 0.08
+    static let velocityDamping: CGFloat = 0.98
+    static let angleDecay: CGFloat = 0.995
+    static let springStrength: CGFloat = 0.0005
+    static let angleInertia: CGFloat = 0.9
+    static let tiltAmplification: CGFloat = 3.0
+    static let waveFrequency1: CGFloat = 0.015
+    static let waveFrequency2: CGFloat = 0.025
+    static let waveSpeed1: Double = 0.8
+    static let waveSpeed2: Double = 0.6
+    static let waveAmplitude1: CGFloat = 3
+    static let waveAmplitude2: CGFloat = 2
+    static let bubbleTiltFactor: CGFloat = 0.5
+    static let bubbleRiseFraction: CGFloat = 0.85
+    static let bubbleCycleSeconds: Double = 8.0
+    static let bubbleViscosityCoeff: Double = 2.0
+    static let bubbleWobbleBase: CGFloat = 1.5
+    static let minLiquidHeightForBubbles: CGFloat = 80
+}
+
+struct LiquidSurfaceView: View {
+    let caffeineAtBedtime: Double
+    let safeLimit: Double
+    @Binding var containerAccelX: CGFloat
+    let bubbleStates: [BubbleState]
+    
+    @State private var physicsState: (tiltAngle: CGFloat, tiltVelocity: CGFloat) = (0, 0)
+    @State private var logFrame: Int = 0
+    
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1/30)) { timeline in
+            Canvas { context, size in
+                let time = timeline.date.timeIntervalSinceReferenceDate
+                logFrame += 1
+                
+                var tiltAngle = physicsState.tiltAngle
+                var tiltVelocity = physicsState.tiltVelocity
+                
+                let accel = containerAccelX
+                containerAccelX *= LiquidPhysics.accelerationDecay
+                
+                tiltVelocity += accel * LiquidPhysics.tiltResponse
+                tiltVelocity -= tiltAngle * LiquidPhysics.springStrength
+                tiltVelocity *= LiquidPhysics.velocityDamping
+                tiltAngle += tiltVelocity * LiquidPhysics.angleInertia
+                tiltAngle *= LiquidPhysics.angleDecay
+                
+                physicsState = (tiltAngle, tiltVelocity)
+                
+                if logFrame % 30 == 0 && (abs(tiltAngle) > 0.01 || abs(accel) > 0.01) {
+                    debugLog("PHYSICS accel:\(String(format: "%.4f", accel)) | tilt:\(String(format: "%.4f", tiltAngle)) vel:\(String(format: "%.4f", tiltVelocity))")
+                }
+                
+                let fillRatio = min(caffeineAtBedtime / max(safeLimit, 1), 1.3)
+                let liquidHeight = size.height * fillRatio
+                let surfaceY = size.height - liquidHeight
+                
+                var liquidPath = Path()
+                liquidPath.move(to: CGPoint(x: 0, y: size.height))
+                liquidPath.addLine(to: CGPoint(x: 0, y: surfaceY + 20))
+                
+                for x in stride(from: 0, through: size.width, by: 3) {
+                    let normalizedX = (x / size.width - 0.5) * 2
+                    let tiltOffset = normalizedX * tiltAngle * LiquidPhysics.tiltAmplification
+                    let wave1 = sin(x * LiquidPhysics.waveFrequency1 + time * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1
+                    let wave2 = sin(x * LiquidPhysics.waveFrequency2 - time * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2
+                    let y = surfaceY + wave1 + wave2 + tiltOffset
+                    liquidPath.addLine(to: CGPoint(x: x, y: y))
+                }
+                
+                liquidPath.addLine(to: CGPoint(x: size.width, y: size.height))
+                liquidPath.closeSubpath()
+                
+                let gradient = Gradient(colors: [
+                    Color(red: 0.25, green: 0.12, blue: 0.05),
+                    Color(red: 0.18, green: 0.08, blue: 0.03),
+                    Color(red: 0.08, green: 0.03, blue: 0.01)
+                ])
+                context.fill(liquidPath, with: .linearGradient(
+                    gradient,
+                    startPoint: CGPoint(x: 0, y: 0),
+                    endPoint: CGPoint(x: 0, y: size.height)
+                ))
+                
+                var foamPath = Path()
+                foamPath.move(to: CGPoint(x: 0, y: surfaceY + 15))
+                
+                for x in stride(from: 0, through: size.width, by: 3) {
+                    let normalizedX = (x / size.width - 0.5) * 2
+                    let tiltOffset = normalizedX * tiltAngle * LiquidPhysics.tiltAmplification
+                    let wave1 = sin(x * LiquidPhysics.waveFrequency1 + time * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1
+                    let wave2 = sin(x * LiquidPhysics.waveFrequency2 - time * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2
+                    let y = surfaceY + wave1 + wave2 + tiltOffset
+                    foamPath.addLine(to: CGPoint(x: x, y: y))
+                }
+                
+                foamPath.addLine(to: CGPoint(x: size.width, y: surfaceY + 15))
+                foamPath.addLine(to: CGPoint(x: 0, y: surfaceY + 15))
+                foamPath.closeSubpath()
+                
+                let foamGradient = Gradient(colors: [
+                    Color(red: 0.85, green: 0.68, blue: 0.45).opacity(0.85),
+                    Color(red: 0.70, green: 0.50, blue: 0.30).opacity(0.6)
+                ])
+                context.fill(foamPath, with: .linearGradient(
+                    foamGradient,
+                    startPoint: CGPoint(x: 0, y: surfaceY),
+                    endPoint: CGPoint(x: 0, y: surfaceY + 35)
+                ))
+                
+                for i in 0..<min(30, bubbleStates.count) {
+                    guard liquidHeight > LiquidPhysics.minLiquidHeightForBubbles else { continue }
+                    let bubble = bubbleStates[i]
+                    
+                    let elapsedTime = time + bubble.phase
+                    let progress = elapsedTime.truncatingRemainder(dividingBy: LiquidPhysics.bubbleCycleSeconds) / LiquidPhysics.bubbleCycleSeconds
+                    
+                    let startY = surfaceY + bubble.baseY
+                    let riseDistance = liquidHeight * LiquidPhysics.bubbleRiseFraction
+                    let currentY = startY - (progress * riseDistance)
+                    
+                    let viscosityDamping = exp(-progress * LiquidPhysics.bubbleViscosityCoeff)
+                    let wobbleAmplitude = LiquidPhysics.bubbleWobbleBase * viscosityDamping
+                    let wobble = sin(time * LiquidPhysics.waveSpeed1 + bubble.wobblePhase) * wobbleAmplitude
+                    
+                    let normalizedBubbleX = (bubble.x / size.width - 0.5) * 2
+                    let currentX = bubble.x + wobble + normalizedBubbleX * tiltAngle * (LiquidPhysics.tiltAmplification * LiquidPhysics.bubbleTiltFactor)
+                    
+                    if currentY > surfaceY && currentY < size.height {
+                        let alpha = min(0.3, 0.3 * viscosityDamping + 0.08)
+                        let bubblePath = Circle().path(in: CGRect(
+                            x: currentX,
+                            y: currentY,
+                            width: bubble.size,
+                            height: bubble.size
+                        ))
+                        context.fill(bubblePath, with: .color(.white.opacity(Double(alpha))))
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -73,13 +250,9 @@ struct KoffeeContentView: View {
         )
     }
     
-    private struct BubbleState {
-        var x: CGFloat
-        var baseY: CGFloat
-        var size: CGFloat
-        var phase: Double
-        var wobblePhase: Double
-    }
+    @State private var containerAccelX: CGFloat = 0
+    @State private var lastWindowPos: CGPoint? = nil
+    @State private var frameCount: Int = 0
 
     var safeLimit: Double {
         config.sensitivity.safeCaffeineAtBedtime
@@ -107,14 +280,29 @@ struct KoffeeContentView: View {
         .gesture(
             DragGesture(minimumDistance: 1)
                 .onChanged { value in
-                    let dragDistance = value.translation
                     let currentOrigin = window.frame.origin
-                    window.setFrameOrigin(CGPoint(
-                        x: currentOrigin.x + dragDistance.width,
-                        y: currentOrigin.y - dragDistance.height
-                    ))
+                    let newX = currentOrigin.x + value.translation.width
+                    let newY = currentOrigin.y - value.translation.height
+                    
+                    if let lastPos = lastWindowPos {
+                        let dx = newX - lastPos.x
+                        let dy = newY - lastPos.y
+                        containerAccelX += dx * 0.08
+                    }
+                    
+                    lastWindowPos = CGPoint(x: newX, y: newY)
+                    window.setFrameOrigin(CGPoint(x: newX, y: newY))
+                }
+                .onEnded { value in
+                    debugLog("DRAG_END velocity:\(String(format: "%.1f", value.velocity.width))")
+                    containerAccelX = value.velocity.width * 0.001
+                    lastWindowPos = nil
                 }
         )
+        .onAppear {
+            clearDebugLog()
+            debugLog("=== KOFFEE START ===")
+        }
         .onAppear { onAppear() }
         .onAppear { updateCaffeineLevel() }
         .onChange(of: config.doses) { _ in updateCaffeineLevel() }
@@ -125,95 +313,12 @@ struct KoffeeContentView: View {
     }
     
     private var coffeeBackground: some View {
-        TimelineView(.animation(minimumInterval: 1/30)) { timeline in
-            let time = timeline.date.timeIntervalSinceReferenceDate
-            
-            Canvas { context, size in
-                let fillRatio = min(caffeineAtBedtime / max(safeLimit, 1), 1.3)
-                let liquidHeight = size.height * fillRatio
-                let surfaceY = size.height - liquidHeight
-                
-                var liquidPath = Path()
-                liquidPath.move(to: CGPoint(x: 0, y: size.height))
-                liquidPath.addLine(to: CGPoint(x: 0, y: surfaceY + 30))
-                
-                for x in stride(from: 0, through: size.width, by: 3) {
-                    let wave1 = sin(x * 0.02 + time * 1.5) * 8
-                    let wave2 = sin(x * 0.03 - time * 1.2) * 5
-                    let y = surfaceY + wave1 + wave2
-                    liquidPath.addLine(to: CGPoint(x: x, y: y))
-                }
-                
-                liquidPath.addLine(to: CGPoint(x: size.width, y: size.height))
-                liquidPath.closeSubpath()
-                
-                let gradient = Gradient(colors: [
-                    Color(red: 0.25, green: 0.12, blue: 0.05),
-                    Color(red: 0.18, green: 0.08, blue: 0.03),
-                    Color(red: 0.08, green: 0.03, blue: 0.01)
-                ])
-                context.fill(liquidPath, with: .linearGradient(
-                    gradient,
-                    startPoint: CGPoint(x: 0, y: 0),
-                    endPoint: CGPoint(x: 0, y: size.height)
-                ))
-                
-                var foamPath = Path()
-                foamPath.move(to: CGPoint(x: 0, y: surfaceY + 25))
-                
-                for x in stride(from: 0, through: size.width, by: 3) {
-                    let wave1 = sin(x * 0.02 + time * 1.5) * 8
-                    let wave2 = sin(x * 0.03 - time * 1.2) * 5
-                    let y = surfaceY + wave1 + wave2
-                    foamPath.addLine(to: CGPoint(x: x, y: y))
-                }
-                
-                foamPath.addLine(to: CGPoint(x: size.width, y: surfaceY + 25))
-                foamPath.addLine(to: CGPoint(x: 0, y: surfaceY + 25))
-                foamPath.closeSubpath()
-                
-                let foamGradient = Gradient(colors: [
-                    Color(red: 0.85, green: 0.68, blue: 0.45).opacity(0.9),
-                    Color(red: 0.70, green: 0.50, blue: 0.30).opacity(0.7)
-                ])
-                context.fill(foamPath, with: .linearGradient(
-                    foamGradient,
-                    startPoint: CGPoint(x: 0, y: surfaceY),
-                    endPoint: CGPoint(x: 0, y: surfaceY + 40)
-                ))
-                
-                for i in 0..<30 {
-                    guard liquidHeight > 80 else { continue }
-                    let bubble = bubbleStates[i]
-                    
-                    let cycleTime = 8.0
-                    let elapsedTime = time + bubble.phase
-                    let progress = elapsedTime.truncatingRemainder(dividingBy: cycleTime) / cycleTime
-                    
-                    let startY = surfaceY + bubble.baseY
-                    let riseDistance = liquidHeight * 0.85
-                    let currentY = startY - (progress * riseDistance)
-                    
-                    let viscosityDamping = exp(-progress * 2.0)
-                    let wobbleAmplitude = 1.5 * viscosityDamping
-                    let wobbleFreq = 0.8
-                    let wobble = sin(time * wobbleFreq + bubble.wobblePhase) * wobbleAmplitude
-                    
-                    let currentX = bubble.x + wobble
-                    
-                    if currentY > surfaceY && currentY < size.height {
-                        let alpha = min(0.35, 0.35 * viscosityDamping + 0.1)
-                        let bubblePath = Circle().path(in: CGRect(
-                            x: currentX,
-                            y: currentY,
-                            width: bubble.size,
-                            height: bubble.size
-                        ))
-                        context.fill(bubblePath, with: .color(.white.opacity(Double(alpha))))
-                    }
-                }
-            }
-        }
+        LiquidSurfaceView(
+            caffeineAtBedtime: caffeineAtBedtime,
+            safeLimit: safeLimit,
+            containerAccelX: $containerAccelX,
+            bubbleStates: bubbleStates
+        )
     }
     
     private var headerSection: some View {
@@ -237,6 +342,14 @@ struct KoffeeContentView: View {
         .padding(12)
         .glassEffect(.regular, in: .rect(cornerRadius: 16))
         .frame(maxWidth: .infinity)
+        .overlay(alignment: .bottomTrailing) {
+            HStack(spacing: 4) {
+                Text("accel:\(String(format: "%.2f", containerAccelX))")
+                    .font(.system(size: 8, design: .monospaced))
+                    .foregroundStyle(containerAccelX != 0 ? .orange : .secondary)
+            }
+            .padding(4)
+        }
     }
     
     private var trafficLights: some View {
