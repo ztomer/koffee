@@ -35,7 +35,6 @@ public struct LiquidContainerView<Content: View>: View {
                 guard liquidHeight > 5 else { return }
                 
                 let layers = configuration.layerConfiguration.layers
-                let transitionWidth = configuration.layerConfiguration.interLayerTransitionWidth
                 
                 var layerBoundaries: [CGFloat] = []
                 for layer in layers {
@@ -70,15 +69,6 @@ public struct LiquidContainerView<Content: View>: View {
                     )
                 }
                 
-                renderLayerBoundaries(
-                    context: context,
-                    size: size,
-                    surfaceY: surfaceY,
-                    layerBoundaries: layerBoundaries,
-                    layers: layers,
-                    transitionWidth: transitionWidth,
-                    liquidHeight: liquidHeight
-                )
             }
             
             content()
@@ -158,57 +148,6 @@ public struct LiquidContainerView<Content: View>: View {
                 bubbleDensity: layer.bubbleDensity,
                 intTime: intTime
             )
-        }
-    }
-    
-    private func renderLayerBoundaries(
-        context: GraphicsContext,
-        size: CGSize,
-        surfaceY: CGFloat,
-        layerBoundaries: [CGFloat],
-        layers: [LiquidLayer],
-        transitionWidth: CGFloat,
-        liquidHeight: CGFloat
-    ) {
-        for boundaryIndex in 1..<layerBoundaries.count {
-            let boundaryY = surfaceY + layerBoundaries[boundaryIndex - 1]
-            let prevLayer = layers[boundaryIndex - 1]
-            let nextLayer = layers[boundaryIndex]
-            
-            let prevLayerTop = boundaryIndex == 1 ? surfaceY : surfaceY + layerBoundaries[boundaryIndex - 2]
-            let nextLayerBottom = surfaceY + layerBoundaries[boundaryIndex]
-            
-            let transitionHeight = liquidHeight * transitionWidth
-            let transitionTop = boundaryY - transitionHeight * 0.5
-            let transitionBottom = boundaryY + transitionHeight * 0.5
-            
-            let clampedTop = max(transitionTop, prevLayerTop)
-            let clampedBottom = min(transitionBottom, nextLayerBottom)
-            
-            guard clampedBottom > clampedTop else { continue }
-            
-            var transitionPath = Path()
-            transitionPath.move(to: CGPoint(x: 0, y: clampedTop))
-            
-            for x in stride(from: 0, through: size.width, by: LiquidPhysics.renderWaveStep) {
-                let waveOffset = physicsEngine.layerSurfaceHeight(x: x, width: size.width, layerIndex: boundaryIndex)
-                let y = boundaryY + waveOffset * 0.3
-                transitionPath.addLine(to: CGPoint(x: x, y: max(clampedTop, min(clampedBottom, y))))
-            }
-            
-            transitionPath.addLine(to: CGPoint(x: size.width, y: clampedBottom))
-            transitionPath.addLine(to: CGPoint(x: 0, y: clampedBottom))
-            transitionPath.closeSubpath()
-            
-            let boundaryGradient = Gradient(colors: [
-                prevLayer.bottomColor,
-                nextLayer.topColor
-            ])
-            context.fill(transitionPath, with: .linearGradient(
-                boundaryGradient,
-                startPoint: CGPoint(x: 0, y: clampedTop),
-                endPoint: CGPoint(x: 0, y: clampedBottom)
-            ))
         }
     }
     
