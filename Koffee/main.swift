@@ -126,6 +126,28 @@ final class LiquidPhysicsEngine: Observable {
         
         return angleEffect + displacementEffect + curvatureEffect + nonlinearity + waveEffect + ripple1 + ripple2
     }
+    
+    func bottomWaveOffset(x: CGFloat, width: CGFloat) -> CGFloat {
+        let normalizedX = x / width
+        let t = _internalTime
+        
+        let bottomPhaseLag: Double = 0.4
+        let bottomDepthFactor: CGFloat = 0.35
+        let bottomDamping: CGFloat = 0.4
+        
+        let baseAngle = surfaceAngle * bottomDepthFactor
+        let baseDisplacement = liquidDisplacement * bottomDepthFactor * 0.5
+        
+        let angleEffect = -baseAngle * (normalizedX - 0.5) * 1.5
+        let displacementEffect = baseDisplacement * (normalizedX - 0.5) * 3.0
+        
+        let waveAmplitude = abs(waves[0].amplitude) + abs(waves[1].amplitude) + abs(waves[2].amplitude)
+        let bottomWave = waveAmplitude * bottomDamping * sin(normalizedX * .pi * 2.0 + t * 1.5 - bottomPhaseLag)
+        
+        let rippleBottom = sin(x * LiquidPhysics.waveFrequency1 + t * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1 * 0.15
+        
+        return angleEffect + displacementEffect + bottomWave + rippleBottom
+    }
 }
 
 struct TrafficLightButton: View {
@@ -207,8 +229,8 @@ struct LiquidSurfaceView: View {
                 let surfaceY = size.height - liquidHeight
                 
                 var liquidPath = Path()
-                liquidPath.move(to: CGPoint(x: 0, y: size.height))
-                liquidPath.addLine(to: CGPoint(x: 0, y: surfaceY + 20))
+                
+                liquidPath.move(to: CGPoint(x: 0, y: surfaceY + 20))
                 
                 for x in stride(from: 0, through: size.width, by: 2) {
                     let waveOffset = physicsEngine.surfaceHeight(x: x, width: size.width)
@@ -216,41 +238,22 @@ struct LiquidSurfaceView: View {
                     liquidPath.addLine(to: CGPoint(x: x, y: y))
                 }
                 
+                liquidPath.addLine(to: CGPoint(x: size.width, y: surfaceY + 20))
+                
                 liquidPath.addLine(to: CGPoint(x: size.width, y: size.height))
+                liquidPath.addLine(to: CGPoint(x: 0, y: size.height))
                 liquidPath.closeSubpath()
                 
                 let gradient = Gradient(colors: [
+                    Color(red: 0.85, green: 0.68, blue: 0.45).opacity(0.9),
+                    Color(red: 0.45, green: 0.25, blue: 0.12),
                     Color(red: 0.25, green: 0.12, blue: 0.05),
-                    Color(red: 0.18, green: 0.08, blue: 0.03),
-                    Color(red: 0.08, green: 0.03, blue: 0.01)
+                    Color(red: 0.12, green: 0.06, blue: 0.02)
                 ])
                 context.fill(liquidPath, with: .linearGradient(
                     gradient,
-                    startPoint: CGPoint(x: 0, y: 0),
-                    endPoint: CGPoint(x: 0, y: size.height)
-                ))
-                
-                var foamPath = Path()
-                foamPath.move(to: CGPoint(x: 0, y: surfaceY + 15))
-                
-                for x in stride(from: 0, through: size.width, by: 2) {
-                    let waveOffset = physicsEngine.surfaceHeight(x: x, width: size.width)
-                    let y = surfaceY + waveOffset
-                    foamPath.addLine(to: CGPoint(x: x, y: y))
-                }
-                
-                foamPath.addLine(to: CGPoint(x: size.width, y: surfaceY + 15))
-                foamPath.addLine(to: CGPoint(x: 0, y: surfaceY + 15))
-                foamPath.closeSubpath()
-                
-                let foamGradient = Gradient(colors: [
-                    Color(red: 0.85, green: 0.68, blue: 0.45).opacity(0.85),
-                    Color(red: 0.70, green: 0.50, blue: 0.30).opacity(0.6)
-                ])
-                context.fill(foamPath, with: .linearGradient(
-                    foamGradient,
                     startPoint: CGPoint(x: 0, y: surfaceY),
-                    endPoint: CGPoint(x: 0, y: surfaceY + 35)
+                    endPoint: CGPoint(x: 0, y: size.height)
                 ))
                 
                 for i in 0..<min(30, bubbleStates.count) {

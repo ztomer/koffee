@@ -124,6 +124,28 @@ struct PhysicsEngine {
         
         return angleEffect + displacementEffect + curvatureEffect + nonlinearity + waveEffect + ripple1 + ripple2
     }
+    
+    func bottomWaveOffset(x: CGFloat, width: CGFloat) -> CGFloat {
+        let normalizedX = x / width
+        let t = _internalTime
+        
+        let bottomPhaseLag: Double = 0.4
+        let bottomDepthFactor: CGFloat = 0.35
+        let bottomDamping: CGFloat = 0.4
+        
+        let baseAngle = surfaceAngle * bottomDepthFactor
+        let baseDisplacement = liquidDisplacement * bottomDepthFactor * 0.5
+        
+        let angleEffect = -baseAngle * (normalizedX - 0.5) * 1.5
+        let displacementEffect = baseDisplacement * (normalizedX - 0.5) * 3.0
+        
+        let waveAmplitude = abs(waves[0].amplitude) + abs(waves[1].amplitude) + abs(waves[2].amplitude)
+        let bottomWave = waveAmplitude * bottomDamping * sin(normalizedX * .pi * 2.0 + t * 1.5 - bottomPhaseLag)
+        
+        let rippleBottom = sin(x * LiquidPhysics.waveFrequency1 + t * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1 * 0.15
+        
+        return angleEffect + displacementEffect + bottomWave + rippleBottom
+    }
 }
 
 var testsPassed = 0
@@ -351,6 +373,35 @@ print("  Expected (linear) at x=100: \(String(format: "%.2f", expectedH100))")
 print("  Curvature deviation: \(String(format: "%.2f", curvature))")
 
 assert(curvature > 0.3, "Surface deviates from linear (has curvature)")
+
+print()
+print(String(repeating: "-", count: 60))
+print("TEST 12: Bottom Wave Follows With Phase Lag")
+print(String(repeating: "-", count: 60))
+var physics12 = PhysicsEngine()
+physics12.applyImpulse(20.0)
+
+for _ in 0..<20 { physics12.step() }
+let surfaceAt20 = physics12.surfaceHeight(x: 100, width: 400)
+let bottomAt20 = physics12.bottomWaveOffset(x: 100, width: 400)
+
+for _ in 0..<20 { physics12.step() }
+let surfaceAt40 = physics12.surfaceHeight(x: 100, width: 400)
+let bottomAt40 = physics12.bottomWaveOffset(x: 100, width: 400)
+
+print("  Surface at frame 20: \(String(format: "%.2f", surfaceAt20))")
+print("  Bottom at frame 20: \(String(format: "%.2f", bottomAt20))")
+print("  Surface at frame 40: \(String(format: "%.2f", surfaceAt40))")
+print("  Bottom at frame 40: \(String(format: "%.2f", bottomAt40))")
+
+let surfaceDiff = abs(surfaceAt40 - surfaceAt20)
+let bottomDiff = abs(bottomAt40 - bottomAt20)
+
+print("  Surface change: \(String(format: "%.2f", surfaceDiff))")
+print("  Bottom change: \(String(format: "%.2f", bottomDiff))")
+
+assert(abs(bottomAt20) > 0, "Bottom wave is non-zero")
+assert(surfaceDiff != bottomDiff || surfaceDiff > 0.1, "Both surface and bottom waves change over time")
 
 print()
 print(String(repeating: "=", count: 60))
