@@ -3,29 +3,60 @@
 import Foundation
 
 struct LiquidPhysics {
-    static let accelerationDecay: CGFloat = 0.92
-    static let tiltResponse: CGFloat = 0.08
-    static let velocityDamping: CGFloat = 0.98
-    static let angleDecay: CGFloat = 0.995
-    static let springStrength: CGFloat = 0.0005
-    static let angleInertia: CGFloat = 0.9
-    static let tiltAmplification: CGFloat = 3.0
+    static let accelerationDecay: CGFloat = 0.88
+    static let tiltResponse: CGFloat = 0.15
+    static let velocityDamping: CGFloat = 0.985
+    static let angleDecay: CGFloat = 0.985
+    static let springStrength: CGFloat = 0.03
+    static let angleInertia: CGFloat = 0.95
+    static let tiltAmplification: CGFloat = 4.5
+    static let waveFrequency1: CGFloat = 0.015
+    static let waveFrequency2: CGFloat = 0.025
+    static let waveSpeed1: Double = 0.8
+    static let waveSpeed2: Double = 0.6
+    static let waveAmplitude1: CGFloat = 3
+    static let waveAmplitude2: CGFloat = 2
+}
+
+struct WaveMode {
+    var amplitude: CGFloat
+    var velocity: CGFloat
 }
 
 struct PhysicsEngine {
-    var tiltAngle: CGFloat = 0
-    var tiltVelocity: CGFloat = 0
+    var modes: [WaveMode] = [
+        WaveMode(amplitude: 0, velocity: 0),
+        WaveMode(amplitude: 0, velocity: 0),
+        WaveMode(amplitude: 0, velocity: 0),
+        WaveMode(amplitude: 0, velocity: 0)
+    ]
+    
     var containerAccelX: CGFloat = 0
+    
+    static let waveDamping: CGFloat = 0.97
+    static let modeCoupling: [CGFloat] = [1.0, 0.4, 0.2, 0.1]
+    static let modeFrequencies: [CGFloat] = [1.0, 1.5, 2.0, 2.5]
     
     mutating func step() {
         let accel = containerAccelX
         containerAccelX *= LiquidPhysics.accelerationDecay
         
-        tiltVelocity += accel * LiquidPhysics.tiltResponse
-        tiltVelocity -= tiltAngle * LiquidPhysics.springStrength
-        tiltVelocity *= LiquidPhysics.velocityDamping
-        tiltAngle += tiltVelocity * LiquidPhysics.angleInertia
-        tiltAngle *= LiquidPhysics.angleDecay
+        for i in 0..<modes.count {
+            let coupling = Self.modeCoupling[i]
+            let freq = Self.modeFrequencies[i]
+            
+            modes[i].velocity += accel * LiquidPhysics.tiltResponse * coupling
+            modes[i].velocity -= modes[i].amplitude * LiquidPhysics.springStrength * freq
+            modes[i].velocity *= LiquidPhysics.velocityDamping
+            modes[i].amplitude += modes[i].velocity * LiquidPhysics.angleInertia * (1.0 / freq)
+            modes[i].amplitude *= LiquidPhysics.angleDecay
+            
+            let maxAmp: CGFloat = i == 0 ? 30.0 : 15.0
+            if abs(modes[i].amplitude) > maxAmp {
+                modes[i].amplitude = maxAmp * (modes[i].amplitude > 0 ? 1 : -1)
+                modes[i].velocity *= -0.3
+            }
+        }
     }
     
     mutating func applyImpulse(_ impulse: CGFloat) {
@@ -33,8 +64,27 @@ struct PhysicsEngine {
     }
     
     mutating func applyDragDelta(_ dx: CGFloat) {
-        containerAccelX += dx * 0.08
+        containerAccelX += dx * 0.02
     }
+    
+    func surfaceHeight(x: CGFloat, width: CGFloat, time: Double) -> CGFloat {
+        var height: CGFloat = 0
+        let normalizedX = x / width
+        
+        height += modes[0].amplitude * sin(.pi * normalizedX)
+        height += modes[1].amplitude * sin(2 * .pi * normalizedX)
+        height += modes[2].amplitude * sin(3 * .pi * normalizedX)
+        
+        let wave1 = sin(x * LiquidPhysics.waveFrequency1 + time * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1
+        let wave2 = sin(x * LiquidPhysics.waveFrequency2 - time * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2
+        height += wave1 + wave2
+        
+        return height
+    }
+    
+    var mode0Amplitude: CGFloat { modes[0].amplitude }
+    var mode1Amplitude: CGFloat { modes[1].amplitude }
+    var mode0Velocity: CGFloat { modes[0].velocity }
 }
 
 var testsPassed = 0
@@ -50,202 +100,246 @@ func assert(_ condition: Bool, _ message: String) {
     }
 }
 
-func assertApprox(_ actual: CGFloat, _ expected: CGFloat, _ tolerance: CGFloat, _ message: String) {
-    if abs(actual - expected) <= tolerance {
-        print("  ✓ \(message) (actual: \(String(format: "%.4f", actual)), expected: \(String(format: "%.4f", expected)))")
-        testsPassed += 1
-    } else {
-        print("  ✗ \(message) (actual: \(String(format: "%.4f", actual)), expected: \(String(format: "%.4f", expected)) ± \(String(format: "%.4f", tolerance)))")
-        testsFailed += 1
-    }
-}
-
 print(String(repeating: "=", count: 60))
-print("LIQUID PHYSICS ENGINE UNIT TESTS")
+print("WAVE-BASED LIQUID PHYSICS ENGINE TESTS")
 print(String(repeating: "=", count: 60))
 print()
 
-print("Constants being tested:")
+print("Physics Constants:")
 print("  accelerationDecay: \(LiquidPhysics.accelerationDecay)")
 print("  tiltResponse:      \(LiquidPhysics.tiltResponse)")
 print("  velocityDamping:   \(LiquidPhysics.velocityDamping)")
 print("  angleDecay:        \(LiquidPhysics.angleDecay)")
+print("  springStrength:    \(LiquidPhysics.springStrength)")
+print("  angleInertia:      \(LiquidPhysics.angleInertia)")
+print("  Mode Coupling:     \(PhysicsEngine.modeCoupling)")
+print("  Mode Frequencies:  \(PhysicsEngine.modeFrequencies)")
 print()
 
 print(String(repeating: "-", count: 60))
-print("TEST 1: Zero State")
+print("TEST 1: Zero State Initialization")
 print(String(repeating: "-", count: 60))
 var physics1 = PhysicsEngine()
-assert(physics1.tiltAngle == 0, "Initial tilt angle is 0")
-assert(physics1.tiltVelocity == 0, "Initial tilt velocity is 0")
+assert(physics1.modes[0].amplitude == 0, "Mode 0 initial amplitude is 0")
+assert(physics1.modes[0].velocity == 0, "Mode 0 initial velocity is 0")
 assert(physics1.containerAccelX == 0, "Initial container acceleration is 0")
 
 print()
 print(String(repeating: "-", count: 60))
-print("TEST 2: Single Impulse Response")
+print("TEST 2: Acceleration Creates Wave Response")
 print(String(repeating: "-", count: 60))
 var physics2 = PhysicsEngine()
-physics2.applyImpulse(1.0)
+physics2.applyImpulse(10.0)
+physics2.step()
 
-for _ in 0..<5 {
-    physics2.step()
-}
-
-let tiltAfter5Frames = physics2.tiltAngle
-print("  Tilt after 5 frames with impulse=1.0: \(String(format: "%.4f", tiltAfter5Frames))")
-
-assert(tiltAfter5Frames > 0, "Tilt is positive after positive impulse")
-assert(tiltAfter5Frames > 0, "Tilt is positive (response to impulse)")
-assert(physics2.containerAccelX < 1.0, "Acceleration has decayed")
-assert(physics2.containerAccelX > 0, "Acceleration still positive (not fully decayed)")
+let mode0AfterImpulse = physics2.mode0Amplitude
+assert(mode0AfterImpulse > 0, "Mode 0 amplitude is positive after positive acceleration")
+assert(physics2.mode0Velocity > 0, "Mode 0 velocity is positive after positive acceleration")
+print("  Mode 0 amplitude after impulse: \(String(format: "%.4f", mode0AfterImpulse))")
 
 print()
 print(String(repeating: "-", count: 60))
-print("TEST 3: Settling Behavior")
+print("TEST 3: Energy Dissipates Over Time (Settling)")
 print(String(repeating: "-", count: 60))
 var physics3 = PhysicsEngine()
-physics3.applyImpulse(2.0)
+physics3.applyImpulse(5.0)
 
-for _ in 0..<5 {
+var mode0History: [CGFloat] = []
+for _ in 0..<300 {
     physics3.step()
+    mode0History.append(physics3.mode0Amplitude)
 }
 
-let tiltAt5 = physics3.tiltAngle
-let velAt5 = physics3.tiltVelocity
+let initialMode0 = mode0History[10]
+let finalMode0 = mode0History.last!
+let midPoint = mode0History.count / 2
+let midMode0 = mode0History[midPoint]
 
-for _ in 5..<300 {
-    physics3.step()
-}
+print("  Initial mode 0 (frame 10): \(String(format: "%.4f", initialMode0))")
+print("  Mid-point mode 0 (frame 150): \(String(format: "%.4f", midMode0))")
+print("  Final mode 0 (frame 300): \(String(format: "%.4f", finalMode0))")
 
-let finalTilt = physics3.tiltAngle
-let finalVel = physics3.tiltVelocity
-
-print("  Tilt at frame 5: \(String(format: "%.4f", tiltAt5))")
-print("  Velocity at frame 5: \(String(format: "%.4f", velAt5))")
-print("  Final tilt (after 300 frames): \(String(format: "%.6f", finalTilt))")
-print("  Final velocity (after 300 frames): \(String(format: "%.6f", finalVel))")
-
-assert(finalTilt < tiltAt5 * 0.5, "Tilt has decayed significantly (at least 50%)")
-assert(finalTilt < 10.0, "Tilt is bounded (less than 10)")
-assert(finalTilt > 0 || abs(finalVel) < 0.1, "System is settling (either positive tilt or near-zero velocity)")
+assert(finalMode0 < initialMode0, "Mode 0 amplitude decreases over time (energy dissipated)")
+assert(abs(finalMode0) < 1.0, "System settles to near-zero amplitude")
+assert(midMode0 < initialMode0, "Amplitude decreases monotonically initially")
 
 print()
 print(String(repeating: "-", count: 60))
-print("TEST 4: Velocity Follows Acceleration")
+print("TEST 4: Boundary Reflection (Wall Bounce)")
 print(String(repeating: "-", count: 60))
 var physics4 = PhysicsEngine()
-physics4.applyImpulse(5.0)
-physics4.step()
+physics4.applyImpulse(100.0)
 
-let tiltAt1 = physics4.tiltAngle
-let velAt1 = physics4.tiltVelocity
-physics4.step()
+var bouncesDetected = 0
+var mode0Peaks: [CGFloat] = []
+var prevMode0: CGFloat = 0
 
-let tiltAt2 = physics4.tiltAngle
-let velAt2 = physics4.tiltVelocity
+for i in 0..<200 {
+    physics4.step()
+    
+    if i > 0 {
+        let current = physics4.mode0Amplitude
+        if prevMode0 > 27.0 && current < prevMode0 {
+            bouncesDetected += 1
+            mode0Peaks.append(prevMode0)
+        }
+        prevMode0 = current
+    }
+}
 
-print("  Frame 1: tilt=\(String(format: "%.4f", tiltAt1)), vel=\(String(format: "%.4f", velAt1))")
-print("  Frame 2: tilt=\(String(format: "%.4f", tiltAt2)), vel=\(String(format: "%.4f", velAt2))")
+print("  Mode 0 peaks observed: \(mode0Peaks.count)")
+if mode0Peaks.count > 1 {
+    print("  First peak: \(String(format: "%.2f", mode0Peaks[0]))")
+    print("  Second peak: \(String(format: "%.2f", mode0Peaks[1]))")
+}
+print("  Max amplitude limit: 30.0")
 
-assert(velAt1 > 0, "Velocity positive after positive impulse")
-assert(tiltAt2 > tiltAt1, "Tilt increased from velocity")
-assert(velAt2 != velAt1, "Velocity changed (damping applied)");
+assert(abs(physics4.mode0Amplitude) <= 31.0, "Mode 0 amplitude stays within bounds (+1 tolerance)")
+assert(bouncesDetected > 0, "Wall bounce detected when exceeding bounds")
 
 print()
 print(String(repeating: "-", count: 60))
-print("TEST 5: Direction Reversal")
+print("TEST 5: Oscillation (Sloshing)")
 print(String(repeating: "-", count: 60))
 var physics5 = PhysicsEngine()
-physics5.applyImpulse(1.0)
-for _ in 0..<10 {
+physics5.applyImpulse(30.0)
+
+var signs: [Int] = []
+for _ in 0..<100 {
     physics5.step()
+    signs.append(physics5.mode0Velocity > 0 ? 1 : -1)
 }
-let tiltAfterPositive = physics5.tiltAngle
 
-physics5.applyImpulse(-1.0)
-for _ in 0..<10 {
-    physics5.step()
-}
-let tiltAfterNegative = physics5.tiltAngle
-
-print("  Tilt after positive impulse: \(String(format: "%.4f", tiltAfterPositive))")
-print("  Tilt after negative impulse: \(String(format: "%.4f", tiltAfterNegative))")
-
-assert(tiltAfterPositive > 0, "Positive impulse gives positive tilt")
-assert(abs(tiltAfterNegative) < abs(tiltAfterPositive) * 1.5, "Negative impulse affects tilt direction");
+let signChanges = zip(signs.dropFirst(), signs).filter { $0 != $1 }.count
+print("  Direction changes observed: \(signChanges)")
+assert(signChanges >= 2, "System oscillates (velocity changes direction at least twice)")
 
 print()
 print(String(repeating: "-", count: 60))
-print("TEST 6: Drag Simulation (Multiple Deltas)")
+print("TEST 6: Direction Reversal")
 print(String(repeating: "-", count: 60))
 var physics6 = PhysicsEngine()
-
-let dragDeltas: [CGFloat] = [10, 20, 15, -5, -20, -15, 5]
-
-for dx in dragDeltas {
-    physics6.applyDragDelta(dx)
+physics6.applyImpulse(10.0)
+for _ in 0..<30 {
     physics6.step()
 }
+let mode0AfterPos = physics6.mode0Amplitude
 
-let tiltAfterDrag = physics6.tiltAngle
-print("  Tilt after drag sequence: \(String(format: "%.4f", tiltAfterDrag))")
+let mode0BeforeNeg = physics6.mode0Amplitude
+physics6.applyImpulse(-10.0)
+for _ in 0..<30 {
+    physics6.step()
+}
+let mode0AfterNeg = physics6.mode0Amplitude
 
-assert(abs(tiltAfterDrag) > 0.01, "Tilt accumulated from drag deltas");
+print("  Mode 0 after positive impulse: \(String(format: "%.4f", mode0AfterPos))")
+print("  Mode 0 after negative impulse: \(String(format: "%.4f", mode0AfterNeg))")
+print("  Mode 0 velocity before negative: \(String(format: "%.4f", physics6.mode0Velocity))")
+
+assert(abs(mode0AfterPos) > 1.0, "Positive acceleration creates significant mode 0")
+assert(abs(mode0AfterNeg) > 0.5, "Negative acceleration creates wave response")
+assert(mode0AfterNeg != mode0BeforeNeg, "Negative impulse changes the wave state")
 
 print()
 print(String(repeating: "-", count: 60))
-print("TEST 7: Steady State Decay")
+print("TEST 7: Momentum Persistence After Drag Stops")
 print(String(repeating: "-", count: 60))
 var physics7 = PhysicsEngine()
 
-physics7.applyImpulse(2.0)
-for _ in 0..<200 {
+for _ in 0..<30 {
+    physics7.applyDragDelta(20.0)
     physics7.step()
 }
 
-print("  System settled after 200 frames: tilt=\(String(format: "%.6f", physics7.tiltAngle))")
+let mode0DuringDrag = physics7.mode0Amplitude
+let velocityDuringDrag = physics7.mode0Velocity
 
-let settledTilt = physics7.tiltAngle
-physics7.step()
-let decayTilt1 = physics7.tiltAngle
-physics7.step()
-let decayTilt2 = physics7.tiltAngle
+for _ in 0..<50 {
+    physics7.step()
+}
 
-print("  Tilt decay in steady state: \(String(format: "%.6f", settledTilt)) -> \(String(format: "%.6f", decayTilt1)) -> \(String(format: "%.6f", decayTilt2))")
+let mode0AfterStop = physics7.mode0Amplitude
+print("  Mode 0 during drag: \(String(format: "%.4f", mode0DuringDrag))")
+print("  Velocity during drag: \(String(format: "%.4f", velocityDuringDrag))")
+print("  Mode 0 50 frames after stop: \(String(format: "%.4f", mode0AfterStop))")
 
-let decayRatio = decayTilt2 / decayTilt1
-print("  Decay ratio (should be ~angleDecay=\(LiquidPhysics.angleDecay)): \(String(format: "%.4f", decayRatio))")
-
-assertApprox(decayRatio, LiquidPhysics.angleDecay, 0.05, "Decay matches angleDecay constant");
+assert(abs(mode0DuringDrag) > 0, "Drag creates wave amplitude")
+assert(abs(mode0AfterStop) > 0.1, "Wave persists after drag stops")
+assert(abs(mode0AfterStop) > abs(mode0DuringDrag) * 0.05, "Wave doesn't immediately vanish")
 
 print()
 print(String(repeating: "-", count: 60))
-print("TEST 8: Visual Amplitude Check")
+print("TEST 8: Visual Wave Height")
 print(String(repeating: "-", count: 60))
 var physics8 = PhysicsEngine()
 
-for i in 0..<15 {
-    let dx = sin(Double(i) / 5.0) * 10
-    physics8.applyDragDelta(CGFloat(dx))
+for _ in 0..<50 {
+    physics8.applyDragDelta(30.0)
     physics8.step()
 }
 
-let maxTilt = physics8.tiltAngle
-let visualOffset = abs(maxTilt) * LiquidPhysics.tiltAmplification
-let windowWidth: CGFloat = 400
+let maxMode0 = physics8.mode0Amplitude
+let surfaceAtCenter = physics8.surfaceHeight(x: 200, width: 400, time: 0)
+let surfaceAtEdge = physics8.surfaceHeight(x: 0, width: 400, time: 0)
+let waveHeight = abs(surfaceAtCenter - surfaceAtEdge)
 
-print("  Max tilt during realistic drag: \(String(format: "%.2f", maxTilt))")
-print("  Visual offset (tilt * amplification): \(String(format: "%.1f", visualOffset)) pixels")
-print("  Window width: \(String(format: "%.0f", windowWidth)) pixels")
-print("  Visual offset as % of width: \(String(format: "%.1f", (visualOffset / windowWidth) * 100))%")
+print("  Max mode 0 amplitude: \(String(format: "%.2f", maxMode0))")
+print("  Surface height difference (edge-center): \(String(format: "%.1f", waveHeight)) pixels")
 
-assert(abs(visualOffset) < windowWidth * 0.8, "Visual offset is less than 80% of window width (reasonable)");
-assert(abs(visualOffset) > windowWidth * 0.02, "Visual offset is more than 2% of window width (visible)");
+assert(abs(waveHeight) > 2.0, "Wave creates visible surface height difference")
+assert(abs(waveHeight) < 80, "Wave height is reasonable (< 80 pixels)")
 
 print()
 print(String(repeating: "-", count: 60))
-print("SUMMARY")
+print("TEST 9: Multiple Higher Modes Activated")
 print(String(repeating: "-", count: 60))
+var physics9 = PhysicsEngine()
+physics9.applyImpulse(50.0)
+
+for _ in 0..<100 {
+    physics9.step()
+}
+
+let mode0 = physics9.mode0Amplitude
+let mode1 = physics9.mode1Amplitude
+
+print("  Mode 0 amplitude: \(String(format: "%.2f", mode0))")
+print("  Mode 1 amplitude: \(String(format: "%.2f", mode1))")
+
+assert(abs(mode0) > 0, "Mode 0 (fundamental tilt) is active")
+assert(abs(mode1) > 0, "Mode 1 (dome) is also activated")
+
+print()
+print(String(repeating: "-", count: 60))
+print("TEST 10: Steady State Convergence")
+print(String(repeating: "-", count: 60))
+var physics10 = PhysicsEngine()
+physics10.applyImpulse(2.0)
+
+for _ in 0..<500 {
+    physics10.step()
+}
+
+let mode0_500 = physics10.mode0Amplitude
+physics10.step()
+let mode0_501 = physics10.mode0Amplitude
+physics10.step()
+let mode0_502 = physics10.mode0Amplitude
+
+let decay1 = abs(mode0_501 - mode0_500)
+let decay2 = abs(mode0_502 - mode0_501)
+
+print("  Mode 0 at frame 500: \(String(format: "%.6f", mode0_500))")
+print("  Mode 0 change 500->501: \(String(format: "%.8f", decay1))")
+print("  Mode 0 change 501->502: \(String(format: "%.8f", decay2))")
+
+assert(abs(mode0_500) < 1.0, "System converges to small amplitude value")
+assert(abs(mode0_500) < 0.1 || decay2 <= decay1 * 2.0, "System is converging (either small or decaying)")
+
+print()
+print(String(repeating: "=", count: 60))
+print("SUMMARY")
+print(String(repeating: "=", count: 60))
 print()
 print("Tests passed: \(testsPassed)")
 print("Tests failed: \(testsFailed)")

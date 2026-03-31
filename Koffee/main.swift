@@ -24,6 +24,69 @@ func clearDebugLog() {
     try? FileManager.default.removeItem(at: debugLogURL)
 }
 
+@MainActor
+final class LiquidPhysicsEngine: Observable {
+    struct WaveMode {
+        var amplitude: CGFloat
+        var velocity: CGFloat
+    }
+    
+    var modes: [WaveMode] = [
+        WaveMode(amplitude: 0, velocity: 0),
+        WaveMode(amplitude: 0, velocity: 0),
+        WaveMode(amplitude: 0, velocity: 0),
+        WaveMode(amplitude: 0, velocity: 0)
+    ]
+    
+    var containerAccelX: CGFloat = 0
+    var logFrame: Int = 0
+    
+    static let waveDamping: CGFloat = 0.97
+    static let modeCoupling: [CGFloat] = [1.0, 0.4, 0.2, 0.1]
+    static let modeFrequencies: [CGFloat] = [1.0, 1.5, 2.0, 2.5]
+    
+    func step() {
+        let accel = containerAccelX
+        containerAccelX *= LiquidPhysics.accelerationDecay
+        
+        for i in 0..<modes.count {
+            let coupling = Self.modeCoupling[i]
+            let freq = Self.modeFrequencies[i]
+            
+            modes[i].velocity += accel * LiquidPhysics.tiltResponse * coupling
+            modes[i].velocity -= modes[i].amplitude * LiquidPhysics.springStrength * freq
+            modes[i].velocity *= LiquidPhysics.velocityDamping
+            modes[i].amplitude += modes[i].velocity * LiquidPhysics.angleInertia * (1.0 / freq)
+            modes[i].amplitude *= LiquidPhysics.angleDecay
+            
+            let maxAmp: CGFloat = i == 0 ? 30.0 : 15.0
+            if abs(modes[i].amplitude) > maxAmp {
+                modes[i].amplitude = maxAmp * (modes[i].amplitude > 0 ? 1 : -1)
+                modes[i].velocity *= -0.3
+            }
+        }
+        
+        logFrame += 1
+    }
+    
+    func surfaceHeight(x: CGFloat, width: CGFloat, time: Double) -> CGFloat {
+        var height: CGFloat = 0
+        let normalizedX = x / width
+        
+        height += modes[0].amplitude * sin(.pi * normalizedX)
+        
+        height += modes[1].amplitude * sin(2 * .pi * normalizedX)
+        
+        height += modes[2].amplitude * sin(3 * .pi * normalizedX)
+        
+        let wave1 = sin(x * LiquidPhysics.waveFrequency1 + time * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1
+        let wave2 = sin(x * LiquidPhysics.waveFrequency2 - time * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2
+        height += wave1 + wave2
+        
+        return height
+    }
+}
+
 struct TrafficLightButton: View {
     let color: Color
     let action: () -> Void
@@ -47,13 +110,13 @@ struct BubbleState {
 }
 
 struct LiquidPhysics {
-    static let accelerationDecay: CGFloat = 0.92
-    static let tiltResponse: CGFloat = 0.08
-    static let velocityDamping: CGFloat = 0.98
-    static let angleDecay: CGFloat = 0.995
-    static let springStrength: CGFloat = 0.0005
-    static let angleInertia: CGFloat = 0.9
-    static let tiltAmplification: CGFloat = 3.0
+    static let accelerationDecay: CGFloat = 0.88
+    static let tiltResponse: CGFloat = 0.15
+    static let velocityDamping: CGFloat = 0.985
+    static let angleDecay: CGFloat = 0.985
+    static let springStrength: CGFloat = 0.03
+    static let angleInertia: CGFloat = 0.95
+    static let tiltAmplification: CGFloat = 4.5
     static let waveFrequency1: CGFloat = 0.015
     static let waveFrequency2: CGFloat = 0.025
     static let waveSpeed1: Double = 0.8
@@ -71,34 +134,21 @@ struct LiquidPhysics {
 struct LiquidSurfaceView: View {
     let caffeineAtBedtime: Double
     let safeLimit: Double
-    @Binding var containerAccelX: CGFloat
+    @Bindable var physicsEngine: LiquidPhysicsEngine
     let bubbleStates: [BubbleState]
-    
-    @State private var physicsState: (tiltAngle: CGFloat, tiltVelocity: CGFloat) = (0, 0)
-    @State private var logFrame: Int = 0
     
     var body: some View {
         TimelineView(.animation(minimumInterval: 1/30)) { timeline in
             Canvas { context, size in
                 let time = timeline.date.timeIntervalSinceReferenceDate
-                logFrame += 1
+                physicsEngine.step()
                 
-                var tiltAngle = physicsState.tiltAngle
-                var tiltVelocity = physicsState.tiltVelocity
+                let accel = physicsEngine.containerAccelX
+                let mode0 = physicsEngine.modes[0].amplitude
+                let mode1 = physicsEngine.modes[1].amplitude
                 
-                let accel = containerAccelX
-                containerAccelX *= LiquidPhysics.accelerationDecay
-                
-                tiltVelocity += accel * LiquidPhysics.tiltResponse
-                tiltVelocity -= tiltAngle * LiquidPhysics.springStrength
-                tiltVelocity *= LiquidPhysics.velocityDamping
-                tiltAngle += tiltVelocity * LiquidPhysics.angleInertia
-                tiltAngle *= LiquidPhysics.angleDecay
-                
-                physicsState = (tiltAngle, tiltVelocity)
-                
-                if logFrame % 30 == 0 && (abs(tiltAngle) > 0.01 || abs(accel) > 0.01) {
-                    debugLog("PHYSICS accel:\(String(format: "%.4f", accel)) | tilt:\(String(format: "%.4f", tiltAngle)) vel:\(String(format: "%.4f", tiltVelocity))")
+                if physicsEngine.logFrame % 30 == 0 {
+                    debugLog("PHYSICS[\(physicsEngine.logFrame)] accel:\(String(format: "%.2f", accel)) | m0:\(String(format: "%.2f", mode0)) m1:\(String(format: "%.2f", mode1))")
                 }
                 
                 let fillRatio = min(caffeineAtBedtime / max(safeLimit, 1), 1.3)
@@ -109,12 +159,9 @@ struct LiquidSurfaceView: View {
                 liquidPath.move(to: CGPoint(x: 0, y: size.height))
                 liquidPath.addLine(to: CGPoint(x: 0, y: surfaceY + 20))
                 
-                for x in stride(from: 0, through: size.width, by: 3) {
-                    let normalizedX = (x / size.width - 0.5) * 2
-                    let tiltOffset = normalizedX * tiltAngle * LiquidPhysics.tiltAmplification
-                    let wave1 = sin(x * LiquidPhysics.waveFrequency1 + time * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1
-                    let wave2 = sin(x * LiquidPhysics.waveFrequency2 - time * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2
-                    let y = surfaceY + wave1 + wave2 + tiltOffset
+                for x in stride(from: 0, through: size.width, by: 2) {
+                    let waveOffset = physicsEngine.surfaceHeight(x: x, width: size.width, time: time)
+                    let y = surfaceY + waveOffset
                     liquidPath.addLine(to: CGPoint(x: x, y: y))
                 }
                 
@@ -135,12 +182,9 @@ struct LiquidSurfaceView: View {
                 var foamPath = Path()
                 foamPath.move(to: CGPoint(x: 0, y: surfaceY + 15))
                 
-                for x in stride(from: 0, through: size.width, by: 3) {
-                    let normalizedX = (x / size.width - 0.5) * 2
-                    let tiltOffset = normalizedX * tiltAngle * LiquidPhysics.tiltAmplification
-                    let wave1 = sin(x * LiquidPhysics.waveFrequency1 + time * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1
-                    let wave2 = sin(x * LiquidPhysics.waveFrequency2 - time * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2
-                    let y = surfaceY + wave1 + wave2 + tiltOffset
+                for x in stride(from: 0, through: size.width, by: 2) {
+                    let waveOffset = physicsEngine.surfaceHeight(x: x, width: size.width, time: time)
+                    let y = surfaceY + waveOffset
                     foamPath.addLine(to: CGPoint(x: x, y: y))
                 }
                 
@@ -174,7 +218,8 @@ struct LiquidSurfaceView: View {
                     let wobble = sin(time * LiquidPhysics.waveSpeed1 + bubble.wobblePhase) * wobbleAmplitude
                     
                     let normalizedBubbleX = (bubble.x / size.width - 0.5) * 2
-                    let currentX = bubble.x + wobble + normalizedBubbleX * tiltAngle * (LiquidPhysics.tiltAmplification * LiquidPhysics.bubbleTiltFactor)
+                    let tiltFactor = mode0 * LiquidPhysics.bubbleTiltFactor
+                    let currentX = bubble.x + wobble + normalizedBubbleX * tiltFactor
                     
                     if currentY > surfaceY && currentY < size.height {
                         let alpha = min(0.3, 0.3 * viscosityDamping + 0.08)
@@ -250,9 +295,8 @@ struct KoffeeContentView: View {
         )
     }
     
-    @State private var containerAccelX: CGFloat = 0
+    @State private var physicsEngine = LiquidPhysicsEngine()
     @State private var lastWindowPos: CGPoint? = nil
-    @State private var frameCount: Int = 0
 
     var safeLimit: Double {
         config.sensitivity.safeCaffeineAtBedtime
@@ -287,7 +331,7 @@ struct KoffeeContentView: View {
                     if let lastPos = lastWindowPos {
                         let dx = newX - lastPos.x
                         let dy = newY - lastPos.y
-                        containerAccelX += dx * 0.08
+                        physicsEngine.containerAccelX += dx * 0.02
                     }
                     
                     lastWindowPos = CGPoint(x: newX, y: newY)
@@ -295,7 +339,7 @@ struct KoffeeContentView: View {
                 }
                 .onEnded { value in
                     debugLog("DRAG_END velocity:\(String(format: "%.1f", value.velocity.width))")
-                    containerAccelX = value.velocity.width * 0.001
+                    physicsEngine.containerAccelX = value.velocity.width * 0.002
                     lastWindowPos = nil
                 }
         )
@@ -316,7 +360,7 @@ struct KoffeeContentView: View {
         LiquidSurfaceView(
             caffeineAtBedtime: caffeineAtBedtime,
             safeLimit: safeLimit,
-            containerAccelX: $containerAccelX,
+            physicsEngine: physicsEngine,
             bubbleStates: bubbleStates
         )
     }
@@ -342,14 +386,6 @@ struct KoffeeContentView: View {
         .padding(12)
         .glassEffect(.regular, in: .rect(cornerRadius: 16))
         .frame(maxWidth: .infinity)
-        .overlay(alignment: .bottomTrailing) {
-            HStack(spacing: 4) {
-                Text("accel:\(String(format: "%.2f", containerAccelX))")
-                    .font(.system(size: 8, design: .monospaced))
-                    .foregroundStyle(containerAccelX != 0 ? .orange : .secondary)
-            }
-            .padding(4)
-        }
     }
     
     private var trafficLights: some View {
