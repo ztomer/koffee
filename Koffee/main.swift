@@ -26,43 +26,60 @@ func clearDebugLog() {
 
 @MainActor
 final class LiquidPhysicsEngine: Observable {
-    struct WaveMode {
-        var amplitude: CGFloat
-        var velocity: CGFloat
-    }
+    var surfaceSlope: CGFloat = 0
+    var slopeVelocity: CGFloat = 0
+    var surfaceOffset: CGFloat = 0
+    var offsetVelocity: CGFloat = 0
     
-    var modes: [WaveMode] = [
-        WaveMode(amplitude: 0, velocity: 0),
-        WaveMode(amplitude: 0, velocity: 0),
-        WaveMode(amplitude: 0, velocity: 0),
-        WaveMode(amplitude: 0, velocity: 0)
-    ]
+    var waves: [(amplitude: CGFloat, phase: CGFloat, velocity: CGFloat, speed: CGFloat, wavelength: CGFloat)] = []
     
     var containerAccelX: CGFloat = 0
     var logFrame: Int = 0
     
-    static let waveDamping: CGFloat = 0.97
-    static let modeCoupling: [CGFloat] = [1.0, 0.4, 0.2, 0.1]
-    static let modeFrequencies: [CGFloat] = [1.0, 1.5, 2.0, 2.5]
+    init() {
+        waves = [
+            (amplitude: 0, phase: 0, velocity: 0, speed: 80, wavelength: 200),
+            (amplitude: 0, phase: 0, velocity: 0, speed: 50, wavelength: 100),
+            (amplitude: 0, phase: 0, velocity: 0, speed: 30, wavelength: 60)
+        ]
+    }
+    
+    func normalizedTime(_ time: Double) -> Double {
+        return time.truncatingRemainder(dividingBy: 100.0)
+    }
     
     func step() {
         let accel = containerAccelX
         containerAccelX *= LiquidPhysics.accelerationDecay
         
-        for i in 0..<modes.count {
-            let coupling = Self.modeCoupling[i]
-            let freq = Self.modeFrequencies[i]
+        slopeVelocity += accel * LiquidPhysics.tiltResponse * 1.5
+        slopeVelocity -= surfaceSlope * LiquidPhysics.springStrength * 0.5
+        slopeVelocity *= LiquidPhysics.velocityDamping
+        surfaceSlope += slopeVelocity * LiquidPhysics.angleInertia
+        surfaceSlope *= LiquidPhysics.angleDecay
+        
+        offsetVelocity += accel * LiquidPhysics.tiltResponse * 0.5
+        offsetVelocity -= surfaceOffset * LiquidPhysics.springStrength * 0.3
+        offsetVelocity *= LiquidPhysics.velocityDamping
+        surfaceOffset += offsetVelocity * LiquidPhysics.angleInertia
+        surfaceOffset *= LiquidPhysics.angleDecay
+        
+        for i in 0..<waves.count {
+            let coupling: CGFloat = i == 0 ? 0.8 : (i == 1 ? 0.3 : 0.15)
+            let freqFactor: CGFloat = 1.0 + CGFloat(i) * 0.5
             
-            modes[i].velocity += accel * LiquidPhysics.tiltResponse * coupling
-            modes[i].velocity -= modes[i].amplitude * LiquidPhysics.springStrength * freq
-            modes[i].velocity *= LiquidPhysics.velocityDamping
-            modes[i].amplitude += modes[i].velocity * LiquidPhysics.angleInertia * (1.0 / freq)
-            modes[i].amplitude *= LiquidPhysics.angleDecay
+            waves[i].velocity += accel * LiquidPhysics.tiltResponse * coupling
+            waves[i].velocity -= waves[i].amplitude * LiquidPhysics.springStrength * freqFactor
+            waves[i].velocity *= LiquidPhysics.velocityDamping
+            waves[i].amplitude += waves[i].velocity * LiquidPhysics.angleInertia
+            waves[i].amplitude *= LiquidPhysics.angleDecay
             
-            let maxAmp: CGFloat = i == 0 ? 30.0 : 15.0
-            if abs(modes[i].amplitude) > maxAmp {
-                modes[i].amplitude = maxAmp * (modes[i].amplitude > 0 ? 1 : -1)
-                modes[i].velocity *= -0.3
+            waves[i].phase += waves[i].speed * LiquidPhysics.angleInertia / waves[i].wavelength
+            
+            let maxAmp: CGFloat = 20.0 - CGFloat(i) * 4.0
+            if abs(waves[i].amplitude) > maxAmp {
+                waves[i].amplitude = maxAmp * (waves[i].amplitude > 0 ? 1 : -1)
+                waves[i].velocity *= -0.2
             }
         }
         
@@ -70,20 +87,25 @@ final class LiquidPhysicsEngine: Observable {
     }
     
     func surfaceHeight(x: CGFloat, width: CGFloat, time: Double) -> CGFloat {
-        var height: CGFloat = 0
+        let t = normalizedTime(time)
         let normalizedX = x / width
         
-        height += modes[0].amplitude * sin(.pi * normalizedX)
+        let tiltEffect = -surfaceSlope * (normalizedX - 0.5) * 15.0
         
-        height += modes[1].amplitude * sin(2 * .pi * normalizedX)
+        var waveEffect: CGFloat = 0
+        for i in 0..<waves.count {
+            let k = 2 * .pi / waves[i].wavelength
+            let w = 2 * .pi / (waves[i].wavelength / waves[i].speed)
+            
+            let travelingRight = waves[i].amplitude * sin(k * x - w * t + waves[i].phase)
+            let travelingLeft = waves[i].amplitude * 0.3 * sin(k * (width - x) + w * t - waves[i].phase)
+            waveEffect += travelingRight + travelingLeft
+        }
         
-        height += modes[2].amplitude * sin(3 * .pi * normalizedX)
+        let ripple1 = sin(x * LiquidPhysics.waveFrequency1 + t * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1
+        let ripple2 = sin(x * LiquidPhysics.waveFrequency2 - t * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2
         
-        let wave1 = sin(x * LiquidPhysics.waveFrequency1 + time * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1
-        let wave2 = sin(x * LiquidPhysics.waveFrequency2 - time * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2
-        height += wave1 + wave2
-        
-        return height
+        return tiltEffect + waveEffect * 0.3 + ripple1 + ripple2
     }
 }
 
@@ -144,11 +166,10 @@ struct LiquidSurfaceView: View {
                 physicsEngine.step()
                 
                 let accel = physicsEngine.containerAccelX
-                let mode0 = physicsEngine.modes[0].amplitude
-                let mode1 = physicsEngine.modes[1].amplitude
+                let slope = physicsEngine.surfaceSlope
                 
                 if physicsEngine.logFrame % 30 == 0 {
-                    debugLog("PHYSICS[\(physicsEngine.logFrame)] accel:\(String(format: "%.2f", accel)) | m0:\(String(format: "%.2f", mode0)) m1:\(String(format: "%.2f", mode1))")
+                    debugLog("PHYSICS[\(physicsEngine.logFrame)] accel:\(String(format: "%.2f", accel)) slope:\(String(format: "%.2f", slope))")
                 }
                 
                 let fillRatio = min(caffeineAtBedtime / max(safeLimit, 1), 1.3)
@@ -217,8 +238,8 @@ struct LiquidSurfaceView: View {
                     let wobbleAmplitude = LiquidPhysics.bubbleWobbleBase * viscosityDamping
                     let wobble = sin(time * LiquidPhysics.waveSpeed1 + bubble.wobblePhase) * wobbleAmplitude
                     
-                    let normalizedBubbleX = (bubble.x / size.width - 0.5) * 2
-                    let tiltFactor = mode0 * LiquidPhysics.bubbleTiltFactor
+                    let normalizedBubbleX = (bubble.x / size.width - 0.5)
+                    let tiltFactor = slope * 30
                     let currentX = bubble.x + wobble + normalizedBubbleX * tiltFactor
                     
                     if currentY > surfaceY && currentY < size.height {
