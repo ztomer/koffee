@@ -28,7 +28,6 @@ func clearDebugLog() {
 final class LiquidPhysicsEngine: Observable {
     struct WaveState {
         var amplitude: CGFloat
-        var phase: CGFloat
         var velocity: CGFloat
     }
     
@@ -43,16 +42,23 @@ final class LiquidPhysicsEngine: Observable {
     var containerAccelX: CGFloat = 0
     var containerVelocityX: CGFloat = 0
     var logFrame: Int = 0
+    private var _internalTime: Double = 0
+    
+    var internalTime: Double {
+        return _internalTime
+    }
     
     init() {
         waves = [
-            WaveState(amplitude: 0, phase: 0, velocity: 0),
-            WaveState(amplitude: 0, phase: 0, velocity: 0),
-            WaveState(amplitude: 0, phase: 0, velocity: 0)
+            WaveState(amplitude: 0, velocity: 0),
+            WaveState(amplitude: 0, velocity: 0),
+            WaveState(amplitude: 0, velocity: 0)
         ]
     }
     
-    func step() {
+    func step(deltaTime: Double) {
+        _internalTime += deltaTime
+        
         let accel = containerAccelX
         containerAccelX *= LiquidPhysics.accelerationDecay
         
@@ -80,11 +86,6 @@ final class LiquidPhysicsEngine: Observable {
             waves[i].amplitude += waves[i].velocity * LiquidPhysics.angleInertia
             waves[i].amplitude *= LiquidPhysics.angleDecay
             
-            let phaseSpeed: CGFloat = i == 0 ? 3.0 : (i == 1 ? 4.5 : 6.0)
-            waves[i].phase += phaseSpeed
-            if waves[i].phase > .pi * 2 { waves[i].phase -= .pi * 2 }
-            if waves[i].phase < -.pi * 2 { waves[i].phase += .pi * 2 }
-            
             let maxAmp: CGFloat = 15.0 - CGFloat(i) * 3.0
             if abs(waves[i].amplitude) > maxAmp {
                 waves[i].amplitude = maxAmp * (waves[i].amplitude > 0 ? 1 : -1)
@@ -95,9 +96,9 @@ final class LiquidPhysicsEngine: Observable {
         logFrame += 1
     }
     
-    func surfaceHeight(x: CGFloat, width: CGFloat, time: Double) -> CGFloat {
-        let t = time.truncatingRemainder(dividingBy: 100.0)
+    func surfaceHeight(x: CGFloat, width: CGFloat) -> CGFloat {
         let normalizedX = x / width
+        let t = _internalTime
         
         let angleEffect = -surfaceAngle * (normalizedX - 0.5) * 2.0
         
@@ -108,20 +109,20 @@ final class LiquidPhysicsEngine: Observable {
         
         let curvatureEffect = curvature * sin(normalizedX * .pi * 2.0 + t * 2.0)
         
-        let nonlinearity = waveAmplitude * 0.2 * sin(normalizedX * .pi * 3.0 + waves[0].phase)
+        let nonlinearity = waveAmplitude * 0.15 * sin(normalizedX * .pi * 3.0 + t * 1.5)
         
         var waveEffect: CGFloat = 0
-        let waveFreqs: [CGFloat] = [0.03, 0.05, 0.07]
-        let waveSpeeds: [Double] = [1.2, 1.8, 2.4]
+        let waveFreqs: [CGFloat] = [0.015, 0.025, 0.035]
+        let wavePhaseOffsets: [Double] = [0.0, 2.0, 4.0]
         
         for i in 0..<waves.count {
-            let depthFactor: CGFloat = 1.0 - CGFloat(i) * 0.2
-            let wave = sin(x * waveFreqs[i] + t * waveSpeeds[i] + waves[i].phase) * waves[i].amplitude * 0.3 * depthFactor
+            let depthFactor: CGFloat = 1.0 - CGFloat(i) * 0.15
+            let wave = sin(x * waveFreqs[i] + t * (0.8 + Double(i) * 0.3) + wavePhaseOffsets[i]) * waves[i].amplitude * 0.25 * depthFactor
             waveEffect += wave
         }
         
-        let ripple1 = sin(x * LiquidPhysics.waveFrequency1 + t * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1 * 0.4
-        let ripple2 = sin(x * LiquidPhysics.waveFrequency2 - t * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2 * 0.4
+        let ripple1 = sin(x * LiquidPhysics.waveFrequency1 + t * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1 * 0.3
+        let ripple2 = sin(x * LiquidPhysics.waveFrequency2 - t * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2 * 0.3
         
         return angleEffect + displacementEffect + curvatureEffect + nonlinearity + waveEffect + ripple1 + ripple2
     }
@@ -177,18 +178,28 @@ struct LiquidSurfaceView: View {
     @Bindable var physicsEngine: LiquidPhysicsEngine
     let bubbleStates: [BubbleState]
     
+    @State private var lastUpdateTime: Double = 0
+    
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1/30)) { timeline in
+        TimelineView(.animation(minimumInterval: 1.0/30.0)) { timeline in
             Canvas { context, size in
-                let time = timeline.date.timeIntervalSinceReferenceDate
-                physicsEngine.step()
+                let currentTime = timeline.date.timeIntervalSinceReferenceDate
+                let deltaTime: Double
+                if lastUpdateTime == 0 {
+                    deltaTime = 1.0 / 30.0
+                } else {
+                    deltaTime = max(1.0 / 60.0, min(currentTime - lastUpdateTime, 1.0 / 15.0))
+                }
+                
+                physicsEngine.step(deltaTime: deltaTime)
                 
                 let accel = physicsEngine.containerAccelX
                 let slope = physicsEngine.surfaceAngle
                 let displacement = physicsEngine.liquidDisplacement
+                let intTime = physicsEngine.internalTime
                 
                 if physicsEngine.logFrame % 30 == 0 {
-                    debugLog("PHYSICS[\(physicsEngine.logFrame)] accel:\(String(format: "%.2f", accel)) slope:\(String(format: "%.2f", slope)) disp:\(String(format: "%.2f", displacement))")
+                    debugLog("PHYSICS[\(physicsEngine.logFrame)] dt:\(String(format: "%.4f", deltaTime)) t:\(String(format: "%.2f", intTime)) accel:\(String(format: "%.2f", accel)) slope:\(String(format: "%.2f", slope))")
                 }
                 
                 let fillRatio = min(caffeineAtBedtime / max(safeLimit, 1), 1.3)
@@ -200,7 +211,7 @@ struct LiquidSurfaceView: View {
                 liquidPath.addLine(to: CGPoint(x: 0, y: surfaceY + 20))
                 
                 for x in stride(from: 0, through: size.width, by: 2) {
-                    let waveOffset = physicsEngine.surfaceHeight(x: x, width: size.width, time: time)
+                    let waveOffset = physicsEngine.surfaceHeight(x: x, width: size.width)
                     let y = surfaceY + waveOffset
                     liquidPath.addLine(to: CGPoint(x: x, y: y))
                 }
@@ -223,7 +234,7 @@ struct LiquidSurfaceView: View {
                 foamPath.move(to: CGPoint(x: 0, y: surfaceY + 15))
                 
                 for x in stride(from: 0, through: size.width, by: 2) {
-                    let waveOffset = physicsEngine.surfaceHeight(x: x, width: size.width, time: time)
+                    let waveOffset = physicsEngine.surfaceHeight(x: x, width: size.width)
                     let y = surfaceY + waveOffset
                     foamPath.addLine(to: CGPoint(x: x, y: y))
                 }
@@ -246,7 +257,7 @@ struct LiquidSurfaceView: View {
                     guard liquidHeight > LiquidPhysics.minLiquidHeightForBubbles else { continue }
                     let bubble = bubbleStates[i]
                     
-                    let elapsedTime = time + bubble.phase
+                    let elapsedTime = intTime + bubble.phase
                     let progress = elapsedTime.truncatingRemainder(dividingBy: LiquidPhysics.bubbleCycleSeconds) / LiquidPhysics.bubbleCycleSeconds
                     
                     let startY = surfaceY + bubble.baseY
@@ -255,7 +266,7 @@ struct LiquidSurfaceView: View {
                     
                     let viscosityDamping = exp(-progress * LiquidPhysics.bubbleViscosityCoeff)
                     let wobbleAmplitude = LiquidPhysics.bubbleWobbleBase * viscosityDamping
-                    let wobble = sin(time * LiquidPhysics.waveSpeed1 + bubble.wobblePhase) * wobbleAmplitude
+                    let wobble = sin(intTime * LiquidPhysics.waveSpeed1 + bubble.wobblePhase) * wobbleAmplitude
                     
                     let normalizedBubbleX = (bubble.x / size.width - 0.5)
                     let tiltFactor = slope * 30
@@ -272,6 +283,9 @@ struct LiquidSurfaceView: View {
                         context.fill(bubblePath, with: .color(.white.opacity(Double(alpha))))
                     }
                 }
+            }
+            .onChange(of: timeline.date) { _, newDate in
+                lastUpdateTime = newDate.timeIntervalSinceReferenceDate
             }
         }
     }

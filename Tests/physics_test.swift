@@ -20,7 +20,6 @@ struct LiquidPhysics {
 
 struct WaveState {
     var amplitude: CGFloat
-    var phase: CGFloat
     var velocity: CGFloat
 }
 
@@ -35,16 +34,23 @@ struct PhysicsEngine {
     
     var containerAccelX: CGFloat = 0
     var containerVelocityX: CGFloat = 0
+    private var _internalTime: Double = 0
+    
+    var internalTime: Double {
+        return _internalTime
+    }
     
     init() {
         waves = [
-            WaveState(amplitude: 0, phase: 0, velocity: 0),
-            WaveState(amplitude: 0, phase: 0, velocity: 0),
-            WaveState(amplitude: 0, phase: 0, velocity: 0)
+            WaveState(amplitude: 0, velocity: 0),
+            WaveState(amplitude: 0, velocity: 0),
+            WaveState(amplitude: 0, velocity: 0)
         ]
     }
     
-    mutating func step() {
+    mutating func step(deltaTime: Double = 1.0/30.0) {
+        _internalTime += deltaTime
+        
         let accel = containerAccelX
         containerAccelX *= LiquidPhysics.accelerationDecay
         
@@ -72,11 +78,6 @@ struct PhysicsEngine {
             waves[i].amplitude += waves[i].velocity * LiquidPhysics.angleInertia
             waves[i].amplitude *= LiquidPhysics.angleDecay
             
-            let phaseSpeed: CGFloat = i == 0 ? 3.0 : (i == 1 ? 4.5 : 6.0)
-            waves[i].phase += phaseSpeed
-            if waves[i].phase > .pi * 2 { waves[i].phase -= .pi * 2 }
-            if waves[i].phase < -.pi * 2 { waves[i].phase += .pi * 2 }
-            
             let maxAmp: CGFloat = 15.0 - CGFloat(i) * 3.0
             if abs(waves[i].amplitude) > maxAmp {
                 waves[i].amplitude = maxAmp * (waves[i].amplitude > 0 ? 1 : -1)
@@ -93,9 +94,9 @@ struct PhysicsEngine {
         containerAccelX += dx * 0.02
     }
     
-    func surfaceHeight(x: CGFloat, width: CGFloat, time: Double) -> CGFloat {
-        let t = time.truncatingRemainder(dividingBy: 100.0)
+    func surfaceHeight(x: CGFloat, width: CGFloat) -> CGFloat {
         let normalizedX = x / width
+        let t = _internalTime
         
         let angleEffect = -surfaceAngle * (normalizedX - 0.5) * 2.0
         
@@ -106,20 +107,20 @@ struct PhysicsEngine {
         
         let curvatureEffect = curvature * sin(normalizedX * .pi * 2.0 + t * 2.0)
         
-        let nonlinearity = waveAmplitude * 0.2 * sin(normalizedX * .pi * 3.0 + waves[0].phase)
+        let nonlinearity = waveAmplitude * 0.15 * sin(normalizedX * .pi * 3.0 + t * 1.5)
         
         var waveEffect: CGFloat = 0
-        let waveFreqs: [CGFloat] = [0.03, 0.05, 0.07]
-        let waveSpeeds: [Double] = [1.2, 1.8, 2.4]
+        let waveFreqs: [CGFloat] = [0.015, 0.025, 0.035]
+        let wavePhaseOffsets: [Double] = [0.0, 2.0, 4.0]
         
         for i in 0..<waves.count {
-            let depthFactor: CGFloat = 1.0 - CGFloat(i) * 0.2
-            let wave = sin(x * waveFreqs[i] + t * waveSpeeds[i] + waves[i].phase) * waves[i].amplitude * 0.3 * depthFactor
+            let depthFactor: CGFloat = 1.0 - CGFloat(i) * 0.15
+            let wave = sin(x * waveFreqs[i] + t * (0.8 + Double(i) * 0.3) + wavePhaseOffsets[i]) * waves[i].amplitude * 0.25 * depthFactor
             waveEffect += wave
         }
         
-        let ripple1 = sin(x * LiquidPhysics.waveFrequency1 + t * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1 * 0.4
-        let ripple2 = sin(x * LiquidPhysics.waveFrequency2 - t * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2 * 0.4
+        let ripple1 = sin(x * LiquidPhysics.waveFrequency1 + t * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1 * 0.3
+        let ripple2 = sin(x * LiquidPhysics.waveFrequency2 - t * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2 * 0.3
         
         return angleEffect + displacementEffect + curvatureEffect + nonlinearity + waveEffect + ripple1 + ripple2
     }
@@ -171,9 +172,9 @@ var physics3 = PhysicsEngine()
 physics3.applyImpulse(15.0)
 for _ in 0..<20 { physics3.step() }
 
-let h0 = physics3.surfaceHeight(x: 0, width: 400, time: 0)
-let h200 = physics3.surfaceHeight(x: 200, width: 400, time: 0)
-let h400 = physics3.surfaceHeight(x: 400, width: 400, time: 0)
+let h0 = physics3.surfaceHeight(x: 0, width: 400)
+let h200 = physics3.surfaceHeight(x: 200, width: 400)
+let h400 = physics3.surfaceHeight(x: 400, width: 400)
 
 print("  Surface at x=0 (left): \(String(format: "%.2f", h0))")
 print("  Surface at x=200 (center): \(String(format: "%.2f", h200))")
@@ -229,13 +230,21 @@ var physics6 = PhysicsEngine()
 physics6.applyImpulse(10.0)
 for _ in 0..<30 { physics6.step() }
 
-let surfaceNow = physics6.surfaceHeight(x: 100, width: 400, time: 0)
-let surfaceLater = physics6.surfaceHeight(x: 100, width: 400, time: 0.1)
+let surfaceAtFrame30 = physics6.surfaceHeight(x: 100, width: 400)
+let frame30InternalTime = physics6.internalTime
 
-print("  Surface at x=100, t=0: \(String(format: "%.4f", surfaceNow))")
-print("  Surface at x=100, t=0.1: \(String(format: "%.4f", surfaceLater))")
+for _ in 0..<30 { physics6.step() }
 
-assert(surfaceNow != surfaceLater, "Surface height changes over time (waves moving)")
+let surfaceAtFrame60 = physics6.surfaceHeight(x: 100, width: 400)
+let frame60InternalTime = physics6.internalTime
+
+print("  Internal time at frame 30: \(String(format: "%.4f", frame30InternalTime))")
+print("  Internal time at frame 60: \(String(format: "%.4f", frame60InternalTime))")
+print("  Surface at x=100, frame 30: \(String(format: "%.4f", surfaceAtFrame30))")
+print("  Surface at x=100, frame 60: \(String(format: "%.4f", surfaceAtFrame60))")
+
+assert(frame60InternalTime != frame30InternalTime, "Internal time advances (animation running)")
+assert(surfaceAtFrame30 != surfaceAtFrame60, "Surface height changes over time (waves moving)")
 
 print()
 print(String(repeating: "-", count: 60))
@@ -269,11 +278,11 @@ var physics8 = PhysicsEngine()
 
 physics8.applyImpulse(10.0)
 for _ in 0..<20 { physics8.step() }
-let h0Pos = physics8.surfaceHeight(x: 0, width: 400, time: 0)
+let h0Pos = physics8.surfaceHeight(x: 0, width: 400)
 
 physics8.applyImpulse(-10.0)
 for _ in 0..<20 { physics8.step() }
-let h0Neg = physics8.surfaceHeight(x: 0, width: 400, time: 0)
+let h0Neg = physics8.surfaceHeight(x: 0, width: 400)
 
 print("  Left surface after positive impulse: \(String(format: "%.4f", h0Pos))")
 print("  Left surface after negative impulse: \(String(format: "%.4f", h0Neg))")
@@ -309,8 +318,8 @@ var physics10 = PhysicsEngine()
 physics10.applyImpulse(20.0)
 for _ in 0..<40 { physics10.step() }
 
-let leadingEdge = physics10.surfaceHeight(x: 400, width: 400, time: 0)
-let trailingEdge = physics10.surfaceHeight(x: 0, width: 400, time: 0)
+let leadingEdge = physics10.surfaceHeight(x: 400, width: 400)
+let trailingEdge = physics10.surfaceHeight(x: 0, width: 400)
 let difference = abs(leadingEdge - trailingEdge)
 
 print("  Trailing edge (left): \(String(format: "%.2f", trailingEdge))")
@@ -327,9 +336,9 @@ var physics11 = PhysicsEngine()
 physics11.applyImpulse(25.0)
 for _ in 0..<50 { physics11.step() }
 
-let h50 = physics11.surfaceHeight(x: 50, width: 400, time: 0)
-let h100 = physics11.surfaceHeight(x: 100, width: 400, time: 0)
-let h150 = physics11.surfaceHeight(x: 150, width: 400, time: 0)
+let h50 = physics11.surfaceHeight(x: 50, width: 400)
+let h100 = physics11.surfaceHeight(x: 100, width: 400)
+let h150 = physics11.surfaceHeight(x: 150, width: 400)
 
 let linearSlope = (h150 - h50) / 100.0
 let expectedH100 = h50 + linearSlope * 50.0
