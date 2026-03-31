@@ -18,6 +18,10 @@ settings:
     CODE_SIGN_ENTITLEMENTS: ""
     INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.healthcare-fitness"
 
+packages:
+  LiquidContainer:
+    path: LiquidContainer
+
 targets:
   Koffee:
     type: application
@@ -27,6 +31,8 @@ targets:
         excludes:
           - "*.xcodeproj"
           - "*.xcworkspace"
+    dependencies:
+      - package: LiquidContainer
     settings:
       base:
         GENERATE_INFOPLIST_FILE: "YES"

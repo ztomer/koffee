@@ -1,0 +1,19 @@
+{
+  "": {
+    "swift-dependencies": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainerTests.build/primary.swiftdeps"
+  },
+  "/Users/ztomer/Projects/koffee/LiquidContainer/Tests/LiquidContainerTests/LiquidLayerPositionTests.swift": {
+    "dependencies": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainerTests.build/LiquidLayerPositionTests.d",
+    "object": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainerTests.build/LiquidLayerPositionTests.swift.o",
+    "swiftmodule": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainerTests.build/LiquidLayerPositionTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainerTests.build/LiquidLayerPositionTests.swiftdeps",
+    "diagnostics": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainerTests.build/LiquidLayerPositionTests.dia"
+  },
+  "/Users/ztomer/Projects/koffee/LiquidContainer/Tests/LiquidContainerTests/LiquidLayerRenderingTests.swift": {
+    "dependencies": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainerTests.build/LiquidLayerRenderingTests.d",
+    "object": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainerTests.build/LiquidLayerRenderingTests.swift.o",
+    "swiftmodule": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainerTests.build/LiquidLayerRenderingTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainerTests.build/LiquidLayerRenderingTests.swiftdeps",
+    "diagnostics": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainerTests.build/LiquidLayerRenderingTests.dia"
+  }
+}

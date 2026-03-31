@@ -1,0 +1,54 @@
+{
+  "": {
+    "swift-dependencies": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/primary.swiftdeps"
+  },
+  "/Users/ztomer/Projects/koffee/LiquidContainer/Sources/LiquidContainer/Configuration.swift": {
+    "dependencies": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/Configuration.d",
+    "object": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/Configuration.swift.o",
+    "swiftmodule": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/Configuration~partial.swiftmodule",
+    "swift-dependencies": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/Configuration.swiftdeps",
+    "diagnostics": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/Configuration.dia"
+  },
+  "/Users/ztomer/Projects/koffee/LiquidContainer/Sources/LiquidContainer/LiquidContainer.swift": {
+    "dependencies": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/LiquidContainer.d",
+    "object": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/LiquidContainer.swift.o",
+    "swiftmodule": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/LiquidContainer~partial.swiftmodule",
+    "swift-dependencies": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/LiquidContainer.swiftdeps",
+    "diagnostics": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/LiquidContainer.dia"
+  },
+  "/Users/ztomer/Projects/koffee/LiquidContainer/Sources/LiquidContainer/LiquidPhysicsConstants.swift": {
+    "dependencies": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/LiquidPhysicsConstants.d",
+    "object": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/LiquidPhysicsConstants.swift.o",
+    "swiftmodule": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/LiquidPhysicsConstants~partial.swiftmodule",
+    "swift-dependencies": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/LiquidPhysicsConstants.swiftdeps",
+    "diagnostics": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/LiquidPhysicsConstants.dia"
+  },
+  "/Users/ztomer/Projects/koffee/LiquidContainer/Sources/LiquidContainer/Noise.swift": {
+    "dependencies": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/Noise.d",
+    "object": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/Noise.swift.o",
+    "swiftmodule": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/Noise~partial.swiftmodule",
+    "swift-dependencies": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/Noise.swiftdeps",
+    "diagnostics": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/Noise.dia"
+  },
+  "/Users/ztomer/Projects/koffee/LiquidContainer/Sources/LiquidContainer/Physics.swift": {
+    "dependencies": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/Physics.d",
+    "object": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/Physics.swift.o",
+    "swiftmodule": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/Physics~partial.swiftmodule",
+    "swift-dependencies": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/Physics.swiftdeps",
+    "diagnostics": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/Physics.dia"
+  },
+  "/Users/ztomer/Projects/koffee/LiquidContainer/Sources/LiquidContainer/Views.swift": {
+    "dependencies": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/Views.d",
+    "object": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/Views.swift.o",
+    "swiftmodule": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/Views~partial.swiftmodule",
+    "swift-dependencies": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/Views.swiftdeps",
+    "diagnostics": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/Views.dia"
+  },
+  "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/DerivedSources/resource_bundle_accessor.swift": {
+    "dependencies": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/resource_bundle_accessor.d",
+    "object": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/resource_bundle_accessor.swift.o",
+    "swiftmodule": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/resource_bundle_accessor~partial.swiftmodule",
+    "swift-dependencies": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/resource_bundle_accessor.swiftdeps",
+    "diagnostics": "/Users/ztomer/Projects/koffee/LiquidContainer/.build/index-build/arm64-apple-macosx/debug/LiquidContainer.build/resource_bundle_accessor.dia"
+  }
+}

@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import Foundation
+import LiquidContainer
 
 let debugLogURL = URL(fileURLWithPath: "/tmp/koffee.log")
 
@@ -24,132 +25,6 @@ func clearDebugLog() {
     try? FileManager.default.removeItem(at: debugLogURL)
 }
 
-@MainActor
-final class LiquidPhysicsEngine: Observable {
-    struct WaveState {
-        var amplitude: CGFloat
-        var velocity: CGFloat
-    }
-    
-    var surfaceAngle: CGFloat = 0
-    var angleVelocity: CGFloat = 0
-    
-    var liquidDisplacement: CGFloat = 0
-    var displacementVelocity: CGFloat = 0
-    
-    var waves: [WaveState] = []
-    
-    var containerAccelX: CGFloat = 0
-    var containerVelocityX: CGFloat = 0
-    var logFrame: Int = 0
-    private var _internalTime: Double = 0
-    
-    var internalTime: Double {
-        return _internalTime
-    }
-    
-    init() {
-        waves = [
-            WaveState(amplitude: 0, velocity: 0),
-            WaveState(amplitude: 0, velocity: 0),
-            WaveState(amplitude: 0, velocity: 0)
-        ]
-    }
-    
-    func step(deltaTime: Double) {
-        _internalTime += deltaTime
-        
-        let accel = containerAccelX
-        containerAccelX *= LiquidPhysics.accelerationDecay
-        
-        containerVelocityX += accel * 0.5
-        containerVelocityX *= 0.98
-        
-        angleVelocity += accel * LiquidPhysics.tiltResponse * 2.0
-        angleVelocity -= surfaceAngle * LiquidPhysics.springStrength * 0.8
-        angleVelocity *= LiquidPhysics.velocityDamping
-        surfaceAngle += angleVelocity * LiquidPhysics.angleInertia
-        surfaceAngle *= LiquidPhysics.angleDecay
-        
-        displacementVelocity += containerVelocityX * 0.003
-        displacementVelocity -= liquidDisplacement * LiquidPhysics.springStrength * 0.3
-        displacementVelocity *= LiquidPhysics.velocityDamping
-        liquidDisplacement += displacementVelocity * LiquidPhysics.angleInertia
-        liquidDisplacement *= LiquidPhysics.angleDecay
-        
-        for i in 0..<waves.count {
-            let coupling: CGFloat = i == 0 ? 0.5 : (i == 1 ? 0.2 : 0.1)
-            
-            waves[i].velocity += accel * LiquidPhysics.tiltResponse * coupling
-            waves[i].velocity -= waves[i].amplitude * LiquidPhysics.springStrength
-            waves[i].velocity *= LiquidPhysics.velocityDamping
-            waves[i].amplitude += waves[i].velocity * LiquidPhysics.angleInertia
-            waves[i].amplitude *= LiquidPhysics.angleDecay
-            
-            let maxAmp: CGFloat = 15.0 - CGFloat(i) * 3.0
-            if abs(waves[i].amplitude) > maxAmp {
-                waves[i].amplitude = maxAmp * (waves[i].amplitude > 0 ? 1 : -1)
-                waves[i].velocity *= -0.3
-            }
-        }
-        
-        logFrame += 1
-    }
-    
-    func surfaceHeight(x: CGFloat, width: CGFloat) -> CGFloat {
-        let normalizedX = x / width
-        let t = _internalTime
-        
-        let angleEffect = -surfaceAngle * (normalizedX - 0.5) * 2.0
-        
-        let displacementEffect = liquidDisplacement * (normalizedX - 0.5) * 8.0
-        
-        let waveAmplitude = abs(waves[0].amplitude) + abs(waves[1].amplitude) + abs(waves[2].amplitude)
-        let curvature = waveAmplitude * 0.3
-        
-        let curvatureEffect = curvature * sin(normalizedX * .pi * 2.0 + t * 2.0)
-        
-        let nonlinearity = waveAmplitude * 0.15 * sin(normalizedX * .pi * 3.0 + t * 1.5)
-        
-        var waveEffect: CGFloat = 0
-        let waveFreqs: [CGFloat] = [0.015, 0.025, 0.035]
-        let wavePhaseOffsets: [Double] = [0.0, 2.0, 4.0]
-        
-        for i in 0..<waves.count {
-            let depthFactor: CGFloat = 1.0 - CGFloat(i) * 0.15
-            let wave = sin(x * waveFreqs[i] + t * (0.8 + Double(i) * 0.3) + wavePhaseOffsets[i]) * waves[i].amplitude * 0.25 * depthFactor
-            waveEffect += wave
-        }
-        
-        let ripple1 = sin(x * LiquidPhysics.waveFrequency1 + t * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1 * 0.3
-        let ripple2 = sin(x * LiquidPhysics.waveFrequency2 - t * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2 * 0.3
-        
-        return angleEffect + displacementEffect + curvatureEffect + nonlinearity + waveEffect + ripple1 + ripple2
-    }
-    
-    func bottomWaveOffset(x: CGFloat, width: CGFloat) -> CGFloat {
-        let normalizedX = x / width
-        let t = _internalTime
-        
-        let bottomPhaseLag: Double = 0.4
-        let bottomDepthFactor: CGFloat = 0.35
-        let bottomDamping: CGFloat = 0.4
-        
-        let baseAngle = surfaceAngle * bottomDepthFactor
-        let baseDisplacement = liquidDisplacement * bottomDepthFactor * 0.5
-        
-        let angleEffect = -baseAngle * (normalizedX - 0.5) * 1.5
-        let displacementEffect = baseDisplacement * (normalizedX - 0.5) * 3.0
-        
-        let waveAmplitude = abs(waves[0].amplitude) + abs(waves[1].amplitude) + abs(waves[2].amplitude)
-        let bottomWave = waveAmplitude * bottomDamping * sin(normalizedX * .pi * 2.0 + t * 1.5 - bottomPhaseLag)
-        
-        let rippleBottom = sin(x * LiquidPhysics.waveFrequency1 + t * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1 * 0.15
-        
-        return angleEffect + displacementEffect + bottomWave + rippleBottom
-    }
-}
-
 struct TrafficLightButton: View {
     let color: Color
     let action: () -> Void
@@ -161,136 +36,6 @@ struct TrafficLightButton: View {
                 .frame(width: 12, height: 12)
         }
         .buttonStyle(.plain)
-    }
-}
-
-struct BubbleState {
-    var x: CGFloat
-    var baseY: CGFloat
-    var size: CGFloat
-    var phase: Double
-    var wobblePhase: Double
-}
-
-struct LiquidPhysics {
-    static let accelerationDecay: CGFloat = 0.88
-    static let tiltResponse: CGFloat = 0.15
-    static let velocityDamping: CGFloat = 0.985
-    static let angleDecay: CGFloat = 0.985
-    static let springStrength: CGFloat = 0.03
-    static let angleInertia: CGFloat = 0.95
-    static let tiltAmplification: CGFloat = 4.5
-    static let waveFrequency1: CGFloat = 0.015
-    static let waveFrequency2: CGFloat = 0.025
-    static let waveSpeed1: Double = 0.8
-    static let waveSpeed2: Double = 0.6
-    static let waveAmplitude1: CGFloat = 3
-    static let waveAmplitude2: CGFloat = 2
-    static let bubbleTiltFactor: CGFloat = 0.5
-    static let bubbleRiseFraction: CGFloat = 0.85
-    static let bubbleCycleSeconds: Double = 8.0
-    static let bubbleViscosityCoeff: Double = 2.0
-    static let bubbleWobbleBase: CGFloat = 1.5
-    static let minLiquidHeightForBubbles: CGFloat = 80
-}
-
-struct LiquidSurfaceView: View {
-    let caffeineAtBedtime: Double
-    let safeLimit: Double
-    @Bindable var physicsEngine: LiquidPhysicsEngine
-    let bubbleStates: [BubbleState]
-    
-    @State private var lastUpdateTime: Double = 0
-    
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0/30.0)) { timeline in
-            Canvas { context, size in
-                let currentTime = timeline.date.timeIntervalSinceReferenceDate
-                let deltaTime: Double
-                if lastUpdateTime == 0 {
-                    deltaTime = 1.0 / 30.0
-                } else {
-                    deltaTime = max(1.0 / 60.0, min(currentTime - lastUpdateTime, 1.0 / 15.0))
-                }
-                
-                physicsEngine.step(deltaTime: deltaTime)
-                
-                let accel = physicsEngine.containerAccelX
-                let slope = physicsEngine.surfaceAngle
-                let displacement = physicsEngine.liquidDisplacement
-                let intTime = physicsEngine.internalTime
-                
-                if physicsEngine.logFrame % 30 == 0 {
-                    debugLog("PHYSICS[\(physicsEngine.logFrame)] dt:\(String(format: "%.4f", deltaTime)) t:\(String(format: "%.2f", intTime)) accel:\(String(format: "%.2f", accel)) slope:\(String(format: "%.2f", slope))")
-                }
-                
-                let fillRatio = min(caffeineAtBedtime / max(safeLimit, 1), 1.3)
-                let liquidHeight = size.height * fillRatio
-                let surfaceY = size.height - liquidHeight
-                
-                var liquidPath = Path()
-                
-                liquidPath.move(to: CGPoint(x: 0, y: surfaceY + 20))
-                
-                for x in stride(from: 0, through: size.width, by: 2) {
-                    let waveOffset = physicsEngine.surfaceHeight(x: x, width: size.width)
-                    let y = surfaceY + waveOffset
-                    liquidPath.addLine(to: CGPoint(x: x, y: y))
-                }
-                
-                liquidPath.addLine(to: CGPoint(x: size.width, y: surfaceY + 20))
-                
-                liquidPath.addLine(to: CGPoint(x: size.width, y: size.height))
-                liquidPath.addLine(to: CGPoint(x: 0, y: size.height))
-                liquidPath.closeSubpath()
-                
-                let gradient = Gradient(colors: [
-                    Color(red: 0.85, green: 0.68, blue: 0.45).opacity(0.9),
-                    Color(red: 0.45, green: 0.25, blue: 0.12),
-                    Color(red: 0.25, green: 0.12, blue: 0.05),
-                    Color(red: 0.12, green: 0.06, blue: 0.02)
-                ])
-                context.fill(liquidPath, with: .linearGradient(
-                    gradient,
-                    startPoint: CGPoint(x: 0, y: surfaceY),
-                    endPoint: CGPoint(x: 0, y: size.height)
-                ))
-                
-                for i in 0..<min(30, bubbleStates.count) {
-                    guard liquidHeight > LiquidPhysics.minLiquidHeightForBubbles else { continue }
-                    let bubble = bubbleStates[i]
-                    
-                    let elapsedTime = intTime + bubble.phase
-                    let progress = elapsedTime.truncatingRemainder(dividingBy: LiquidPhysics.bubbleCycleSeconds) / LiquidPhysics.bubbleCycleSeconds
-                    
-                    let startY = surfaceY + bubble.baseY
-                    let riseDistance = liquidHeight * LiquidPhysics.bubbleRiseFraction
-                    let currentY = startY - (progress * riseDistance)
-                    
-                    let viscosityDamping = exp(-progress * LiquidPhysics.bubbleViscosityCoeff)
-                    let wobbleAmplitude = LiquidPhysics.bubbleWobbleBase * viscosityDamping
-                    let wobble = sin(intTime * LiquidPhysics.waveSpeed1 + bubble.wobblePhase) * wobbleAmplitude
-                    
-                    let normalizedBubbleX = (bubble.x / size.width - 0.5)
-                    let tiltFactor = slope * 30
-                    let currentX = bubble.x + wobble + normalizedBubbleX * tiltFactor
-                    
-                    if currentY > surfaceY && currentY < size.height {
-                        let alpha = min(0.3, 0.3 * viscosityDamping + 0.08)
-                        let bubblePath = Circle().path(in: CGRect(
-                            x: currentX,
-                            y: currentY,
-                            width: bubble.size,
-                            height: bubble.size
-                        ))
-                        context.fill(bubblePath, with: .color(.white.opacity(Double(alpha))))
-                    }
-                }
-            }
-            .onChange(of: timeline.date) { _, newDate in
-                lastUpdateTime = newDate.timeIntervalSinceReferenceDate
-            }
-        }
     }
 }
 
@@ -340,17 +85,7 @@ struct KoffeeContentView: View {
     @ObservedObject private var beverages = BeverageManager.shared
 
     @State private var caffeineAtBedtime: Double = 0
-    @State private var bubbleSeeds: [Int] = (0..<30).map { _ in Int.random(in: 0...10000) }
-    @State private var bubbleStates: [BubbleState] = (0..<30).map { i in
-        let seed = Int.random(in: 0...10000)
-        return BubbleState(
-            x: CGFloat(seed % 360) + 20,
-            baseY: CGFloat((seed / 100) % 400) + 20,
-            size: CGFloat(4 + (seed % 7)),
-            phase: Double(i) * 0.3,
-            wobblePhase: Double(i) * 0.7
-        )
-    }
+    @State private var bubbleStates: [BubbleState] = BubbleGenerator.generate(count: 30, width: 400, height: 650)
     
     @State private var physicsEngine = LiquidPhysicsEngine()
     @State private var lastWindowPos: CGPoint? = nil
@@ -358,10 +93,104 @@ struct KoffeeContentView: View {
     var safeLimit: Double {
         config.sensitivity.safeCaffeineAtBedtime
     }
+    
+    var fillRatio: Double {
+        caffeineAtBedtime / max(safeLimit, 1)
+    }
+    
+    var liquidConfiguration: LiquidContainerConfiguration {
+        guard let firstDose = config.doses.first,
+              firstDose.beverageIndex >= 0,
+              firstDose.beverageIndex < beverages.beverages.count else {
+            return .coffee
+        }
+        
+        let category = beverages.beverages[firstDose.beverageIndex].category.lowercased()
+        
+        switch category {
+        case "coffee":
+            return .coffee
+        case "tea":
+            return LiquidContainerConfiguration(
+                liquidColor: Color(red: 0.65, green: 0.55, blue: 0.40),
+                liquidColorDark: Color(red: 0.15, green: 0.10, blue: 0.05),
+                liquidColorMid: Color(red: 0.35, green: 0.25, blue: 0.15),
+                liquidColorLight: Color(red: 0.75, green: 0.65, blue: 0.50),
+                foamColor: Color(red: 0.90, green: 0.85, blue: 0.75),
+                foamCremaColor: Color(red: 0.85, green: 0.75, blue: 0.60),
+                minFillRatio: 0.05,
+                maxFillRatio: 1.3,
+                layerConfiguration: LiquidLayerConfiguration(
+                    layers: [
+                        LiquidLayer(
+                            name: "foam",
+                            topColor: Color(red: 0.95, green: 0.90, blue: 0.85),
+                            bottomColor: Color(red: 0.80, green: 0.70, blue: 0.60),
+                            boundaryHeight: 0.15,
+                            waveDamping: 0.96,
+                            phaseDelay: 0.0,
+                            hasFoam: true,
+                            foamColor: Color(red: 0.95, green: 0.90, blue: 0.85),
+                            bubbleDensity: 0.6
+                        ),
+                        LiquidLayer(
+                            name: "liquid",
+                            topColor: Color(red: 0.50, green: 0.35, blue: 0.20),
+                            bottomColor: Color(red: 0.20, green: 0.12, blue: 0.06),
+                            boundaryHeight: 1.0,
+                            waveDamping: 0.88,
+                            phaseDelay: 0.15
+                        )
+                    ]
+                )
+            )
+        case "energy":
+            return LiquidContainerConfiguration(
+                liquidColor: Color(red: 0.95, green: 0.85, blue: 0.10),
+                liquidColorDark: Color(red: 0.60, green: 0.40, blue: 0.02),
+                liquidColorMid: Color(red: 0.80, green: 0.60, blue: 0.05),
+                liquidColorLight: Color(red: 0.98, green: 0.92, blue: 0.30),
+                foamColor: Color(red: 1.0, green: 0.95, blue: 0.70),
+                foamCremaColor: Color(red: 0.95, green: 0.85, blue: 0.50),
+                minFillRatio: 0.05,
+                maxFillRatio: 1.3,
+                layerConfiguration: LiquidLayerConfiguration(
+                    layers: [
+                        LiquidLayer(
+                            name: "foam",
+                            topColor: Color(red: 1.0, green: 0.98, blue: 0.85),
+                            bottomColor: Color(red: 0.95, green: 0.90, blue: 0.70),
+                            boundaryHeight: 0.08,
+                            waveDamping: 0.97,
+                            phaseDelay: 0.0,
+                            hasFoam: true,
+                            foamColor: Color(red: 1.0, green: 0.98, blue: 0.85),
+                            bubbleDensity: 0.9
+                        ),
+                        LiquidLayer(
+                            name: "liquid",
+                            topColor: Color(red: 0.85, green: 0.65, blue: 0.08),
+                            bottomColor: Color(red: 0.50, green: 0.30, blue: 0.02),
+                            boundaryHeight: 1.0,
+                            waveDamping: 0.86,
+                            phaseDelay: 0.12
+                        )
+                    ]
+                )
+            )
+        default:
+            return .coffee
+        }
+    }
 
     var body: some View {
         ZStack {
-            coffeeBackground
+            LiquidContainerView(
+                fillLevel: CGFloat(fillRatio),
+                configuration: liquidConfiguration,
+                physicsEngine: physicsEngine,
+                bubbleStates: bubbleStates
+            )
             
             ScrollView {
                 VStack(spacing: 16) {
@@ -387,7 +216,6 @@ struct KoffeeContentView: View {
                     
                     if let lastPos = lastWindowPos {
                         let dx = newX - lastPos.x
-                        let dy = newY - lastPos.y
                         physicsEngine.containerAccelX += dx * 0.02
                     }
                     
@@ -406,20 +234,11 @@ struct KoffeeContentView: View {
         }
         .onAppear { onAppear() }
         .onAppear { updateCaffeineLevel() }
-        .onChange(of: config.doses) { _ in updateCaffeineLevel() }
-        .onChange(of: config.weight) { _ in updateCaffeineLevel() }
-        .onChange(of: config.sensitivity) { _ in updateCaffeineLevel() }
-        .onChange(of: config.wakeTime) { _ in updateCaffeineLevel() }
-        .onChange(of: config.sleepTime) { _ in updateCaffeineLevel() }
-    }
-    
-    private var coffeeBackground: some View {
-        LiquidSurfaceView(
-            caffeineAtBedtime: caffeineAtBedtime,
-            safeLimit: safeLimit,
-            physicsEngine: physicsEngine,
-            bubbleStates: bubbleStates
-        )
+        .onChange(of: config.doses) { _, _ in updateCaffeineLevel() }
+        .onChange(of: config.weight) { _, _ in updateCaffeineLevel() }
+        .onChange(of: config.sensitivity) { _, _ in updateCaffeineLevel() }
+        .onChange(of: config.wakeTime) { _, _ in updateCaffeineLevel() }
+        .onChange(of: config.sleepTime) { _, _ in updateCaffeineLevel() }
     }
     
     private var headerSection: some View {
