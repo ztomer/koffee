@@ -18,21 +18,29 @@ struct LiquidPhysics {
     static let waveAmplitude2: CGFloat = 2
 }
 
+struct WaveState {
+    var amplitude: CGFloat
+    var phase: CGFloat
+    var velocity: CGFloat
+}
+
 struct PhysicsEngine {
-    var surfaceSlope: CGFloat = 0
-    var slopeVelocity: CGFloat = 0
-    var surfaceOffset: CGFloat = 0
-    var offsetVelocity: CGFloat = 0
+    var surfaceAngle: CGFloat = 0
+    var angleVelocity: CGFloat = 0
     
-    var waves: [(amplitude: CGFloat, phase: CGFloat, velocity: CGFloat, speed: CGFloat, wavelength: CGFloat)] = []
+    var liquidDisplacement: CGFloat = 0
+    var displacementVelocity: CGFloat = 0
+    
+    var waves: [WaveState] = []
     
     var containerAccelX: CGFloat = 0
+    var containerVelocityX: CGFloat = 0
     
     init() {
         waves = [
-            (amplitude: 0, phase: 0, velocity: 0, speed: 80, wavelength: 200),
-            (amplitude: 0, phase: 0, velocity: 0, speed: 50, wavelength: 100),
-            (amplitude: 0, phase: 0, velocity: 0, speed: 30, wavelength: 60)
+            WaveState(amplitude: 0, phase: 0, velocity: 0),
+            WaveState(amplitude: 0, phase: 0, velocity: 0),
+            WaveState(amplitude: 0, phase: 0, velocity: 0)
         ]
     }
     
@@ -40,34 +48,39 @@ struct PhysicsEngine {
         let accel = containerAccelX
         containerAccelX *= LiquidPhysics.accelerationDecay
         
-        slopeVelocity += accel * LiquidPhysics.tiltResponse * 1.5
-        slopeVelocity -= surfaceSlope * LiquidPhysics.springStrength * 0.5
-        slopeVelocity *= LiquidPhysics.velocityDamping
-        surfaceSlope += slopeVelocity * LiquidPhysics.angleInertia
-        surfaceSlope *= LiquidPhysics.angleDecay
+        containerVelocityX += accel * 0.5
+        containerVelocityX *= 0.98
         
-        offsetVelocity += accel * LiquidPhysics.tiltResponse * 0.5
-        offsetVelocity -= surfaceOffset * LiquidPhysics.springStrength * 0.3
-        offsetVelocity *= LiquidPhysics.velocityDamping
-        surfaceOffset += offsetVelocity * LiquidPhysics.angleInertia
-        surfaceOffset *= LiquidPhysics.angleDecay
+        angleVelocity += accel * LiquidPhysics.tiltResponse * 2.0
+        angleVelocity -= surfaceAngle * LiquidPhysics.springStrength * 0.8
+        angleVelocity *= LiquidPhysics.velocityDamping
+        surfaceAngle += angleVelocity * LiquidPhysics.angleInertia
+        surfaceAngle *= LiquidPhysics.angleDecay
+        
+        displacementVelocity += containerVelocityX * 0.003
+        displacementVelocity -= liquidDisplacement * LiquidPhysics.springStrength * 0.3
+        displacementVelocity *= LiquidPhysics.velocityDamping
+        liquidDisplacement += displacementVelocity * LiquidPhysics.angleInertia
+        liquidDisplacement *= LiquidPhysics.angleDecay
         
         for i in 0..<waves.count {
-            let coupling: CGFloat = i == 0 ? 0.8 : (i == 1 ? 0.3 : 0.15)
-            let freqFactor: CGFloat = 1.0 + CGFloat(i) * 0.5
+            let coupling: CGFloat = i == 0 ? 0.5 : (i == 1 ? 0.2 : 0.1)
             
             waves[i].velocity += accel * LiquidPhysics.tiltResponse * coupling
-            waves[i].velocity -= waves[i].amplitude * LiquidPhysics.springStrength * freqFactor
+            waves[i].velocity -= waves[i].amplitude * LiquidPhysics.springStrength
             waves[i].velocity *= LiquidPhysics.velocityDamping
             waves[i].amplitude += waves[i].velocity * LiquidPhysics.angleInertia
             waves[i].amplitude *= LiquidPhysics.angleDecay
             
-            waves[i].phase += waves[i].speed * LiquidPhysics.angleInertia / waves[i].wavelength
+            let phaseSpeed: CGFloat = i == 0 ? 3.0 : (i == 1 ? 4.5 : 6.0)
+            waves[i].phase += phaseSpeed
+            if waves[i].phase > .pi * 2 { waves[i].phase -= .pi * 2 }
+            if waves[i].phase < -.pi * 2 { waves[i].phase += .pi * 2 }
             
-            let maxAmp: CGFloat = 20.0 - CGFloat(i) * 4.0
+            let maxAmp: CGFloat = 15.0 - CGFloat(i) * 3.0
             if abs(waves[i].amplitude) > maxAmp {
                 waves[i].amplitude = maxAmp * (waves[i].amplitude > 0 ? 1 : -1)
-                waves[i].velocity *= -0.2
+                waves[i].velocity *= -0.3
             }
         }
     }
@@ -82,24 +95,25 @@ struct PhysicsEngine {
     
     func surfaceHeight(x: CGFloat, width: CGFloat, time: Double) -> CGFloat {
         let t = time.truncatingRemainder(dividingBy: 100.0)
-        let normalizedX = x / width
+        let normalizedX = (x / width - 0.5) * 2
         
-        let tiltEffect = -surfaceSlope * (normalizedX - 0.5) * 15.0
+        let angleEffect = -surfaceAngle * normalizedX * 2.0
+        
+        let displacementEffect = liquidDisplacement * (normalizedX * 0.5 + 0.5) * 1.5
         
         var waveEffect: CGFloat = 0
+        let waveFreqs: [CGFloat] = [0.03, 0.05, 0.07]
+        let waveSpeeds: [Double] = [1.2, 1.8, 2.4]
+        
         for i in 0..<waves.count {
-            let k = 2 * .pi / waves[i].wavelength
-            let w = 2 * .pi / (waves[i].wavelength / waves[i].speed)
-            
-            let travelingRight = waves[i].amplitude * sin(k * x - w * t + waves[i].phase)
-            let travelingLeft = waves[i].amplitude * 0.3 * sin(k * (width - x) + w * t - waves[i].phase)
-            waveEffect += travelingRight + travelingLeft
+            let wave = sin(x * waveFreqs[i] + t * waveSpeeds[i] + waves[i].phase) * waves[i].amplitude * 0.15
+            waveEffect += wave
         }
         
-        let ripple1 = sin(x * LiquidPhysics.waveFrequency1 + t * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1
-        let ripple2 = sin(x * LiquidPhysics.waveFrequency2 - t * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2
+        let ripple1 = sin(x * LiquidPhysics.waveFrequency1 + t * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1 * 0.5
+        let ripple2 = sin(x * LiquidPhysics.waveFrequency2 - t * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2 * 0.5
         
-        return tiltEffect + waveEffect * 0.3 + ripple1 + ripple2
+        return angleEffect + displacementEffect + waveEffect + ripple1 + ripple2
     }
 }
 
@@ -117,7 +131,7 @@ func assert(_ condition: Bool, _ message: String) {
 }
 
 print(String(repeating: "=", count: 60))
-print("SLOSH PHYSICS ENGINE TESTS")
+print("LIQUID SLOSH PHYSICS ENGINE TESTS")
 print(String(repeating: "=", count: 60))
 print()
 
@@ -125,25 +139,25 @@ print(String(repeating: "-", count: 60))
 print("TEST 1: Zero State Initialization")
 print(String(repeating: "-", count: 60))
 var physics1 = PhysicsEngine()
-assert(physics1.surfaceSlope == 0, "Initial slope is 0")
-assert(physics1.surfaceOffset == 0, "Initial offset is 0")
+assert(physics1.surfaceAngle == 0, "Initial surface angle is 0")
+assert(physics1.liquidDisplacement == 0, "Initial liquid displacement is 0")
 assert(physics1.containerAccelX == 0, "Initial container acceleration is 0")
 
 print()
 print(String(repeating: "-", count: 60))
-print("TEST 2: Acceleration Creates Slope")
+print("TEST 2: Acceleration Creates Surface Angle")
 print(String(repeating: "-", count: 60))
 var physics2 = PhysicsEngine()
 physics2.applyImpulse(10.0)
 physics2.step()
 
-let slopeAfterImpulse = physics2.surfaceSlope
-assert(abs(slopeAfterImpulse) > 0.5, "Surface slope is significant after positive acceleration")
-print("  Surface slope after impulse: \(String(format: "%.4f", slopeAfterImpulse))")
+let angleAfterImpulse = physics2.surfaceAngle
+assert(abs(angleAfterImpulse) > 0.5, "Surface angle is significant after positive acceleration")
+print("  Surface angle after impulse: \(String(format: "%.4f", angleAfterImpulse))")
 
 print()
 print(String(repeating: "-", count: 60))
-print("TEST 3: Surface Tilt is Linear Across Width")
+print("TEST 3: Surface Tilts - Left Side Rises on Rightward Acceleration")
 print(String(repeating: "-", count: 60))
 var physics3 = PhysicsEngine()
 physics3.applyImpulse(15.0)
@@ -153,16 +167,14 @@ let h0 = physics3.surfaceHeight(x: 0, width: 400, time: 0)
 let h200 = physics3.surfaceHeight(x: 200, width: 400, time: 0)
 let h400 = physics3.surfaceHeight(x: 400, width: 400, time: 0)
 
-let leftEdgeHigh = h0 > h200
-let rightEdgeLow = h400 < h200
-let isLinear = leftEdgeHigh && rightEdgeLow
+print("  Surface at x=0 (left): \(String(format: "%.2f", h0))")
+print("  Surface at x=200 (center): \(String(format: "%.2f", h200))")
+print("  Surface at x=400 (right): \(String(format: "%.2f", h400))")
 
-print("  Surface at x=0: \(String(format: "%.2f", h0))")
-print("  Surface at x=200: \(String(format: "%.2f", h200))")
-print("  Surface at x=400: \(String(format: "%.2f", h400))")
-print("  Left edge \(leftEdgeHigh ? ">" : "<") center, Right edge \(rightEdgeLow ? "<" : ">") center")
+let leftSideHigher = h0 > h400
+print("  Left side \(leftSideHigher ? ">" : "<") right side")
 
-assert(isLinear, "Surface shows linear tilt (one side higher than other)")
+assert(leftSideHigher, "Left side rises when accelerating right (trailing edge effect)")
 
 print()
 print(String(repeating: "-", count: 60))
@@ -171,44 +183,42 @@ print(String(repeating: "-", count: 60))
 var physics4 = PhysicsEngine()
 physics4.applyImpulse(5.0)
 
-var slopeHistory: [CGFloat] = []
+var angleHistory: [CGFloat] = []
 for _ in 0..<300 {
     physics4.step()
-    slopeHistory.append(physics4.surfaceSlope)
+    angleHistory.append(physics4.surfaceAngle)
 }
 
-let initialSlope = abs(slopeHistory[10])
-let finalSlope = abs(slopeHistory.last!)
+let initialAngle = abs(angleHistory[10])
+let finalAngle = abs(angleHistory.last!)
 
-print("  Initial slope (frame 10): \(String(format: "%.4f", initialSlope))")
-print("  Final slope (frame 300): \(String(format: "%.4f", finalSlope))")
+print("  Initial angle (frame 10): \(String(format: "%.4f", initialAngle))")
+print("  Final angle (frame 300): \(String(format: "%.4f", finalAngle))")
 
-assert(finalSlope < initialSlope * 0.5, "Slope amplitude decreases over time")
+assert(finalAngle < initialAngle * 0.5, "Surface angle decreases over time")
 
 print()
 print(String(repeating: "-", count: 60))
-print("TEST 5: Waves Create Surface Variation")
+print("TEST 5: Liquid Displacement Tracks Velocity")
 print(String(repeating: "-", count: 60))
 var physics5 = PhysicsEngine()
-physics5.applyImpulse(20.0)
+physics5.applyImpulse(10.0)
+for _ in 0..<30 { physics5.step() }
 
-for _ in 0..<50 {
-    physics5.step()
-}
+let displacement = physics5.liquidDisplacement
+let velocity = physics5.containerVelocityX
 
-let wave0 = physics5.waves[0]
-print("  Wave 0 amplitude: \(String(format: "%.2f", wave0.amplitude))")
-print("  Wave 0 phase: \(String(format: "%.2f", wave0.phase))")
+print("  Container velocity: \(String(format: "%.4f", velocity))")
+print("  Liquid displacement: \(String(format: "%.4f", displacement))")
 
-assert(abs(wave0.amplitude) > 1.0, "Wave 0 amplitude is significant")
+assert(abs(displacement) > 0, "Liquid displacement is non-zero after acceleration")
 
 print()
 print(String(repeating: "-", count: 60))
-print("TEST 6: Surface Height Varies Over Time")
+print("TEST 6: Surface Height Changes Over Time (Wave Motion)")
 print(String(repeating: "-", count: 60))
 var physics6 = PhysicsEngine()
 physics6.applyImpulse(10.0)
-
 for _ in 0..<30 { physics6.step() }
 
 let surfaceNow = physics6.surfaceHeight(x: 100, width: 400, time: 0)
@@ -217,11 +227,11 @@ let surfaceLater = physics6.surfaceHeight(x: 100, width: 400, time: 0.1)
 print("  Surface at x=100, t=0: \(String(format: "%.4f", surfaceNow))")
 print("  Surface at x=100, t=0.1: \(String(format: "%.4f", surfaceLater))")
 
-assert(surfaceNow != surfaceLater, "Surface height changes over time")
+assert(surfaceNow != surfaceLater, "Surface height changes over time (waves moving)")
 
 print()
 print(String(repeating: "-", count: 60))
-print("TEST 7: Momentum Persistence")
+print("TEST 7: Momentum Persistence - Liquid Continues After Stop")
 print(String(repeating: "-", count: 60))
 var physics7 = PhysicsEngine()
 
@@ -230,42 +240,41 @@ for _ in 0..<30 {
     physics7.step()
 }
 
-let slopeDuringDrag = physics7.surfaceSlope
+let displacementDuringDrag = physics7.liquidDisplacement
 
 for _ in 0..<50 {
     physics7.step()
 }
 
-let slopeAfterStop = physics7.surfaceSlope
-print("  Slope during drag: \(String(format: "%.4f", slopeDuringDrag))")
-print("  Slope 50 frames after stop: \(String(format: "%.4f", slopeAfterStop))")
+let displacementAfterStop = physics7.liquidDisplacement
+print("  Displacement during drag: \(String(format: "%.4f", displacementDuringDrag))")
+print("  Displacement 50 frames after stop: \(String(format: "%.4f", displacementAfterStop))")
 
-assert(abs(slopeDuringDrag) > 0, "Drag creates slope")
-assert(abs(slopeAfterStop) > 0.1 || abs(slopeAfterStop) < abs(slopeDuringDrag), "Slope persists or decays naturally")
+assert(abs(displacementDuringDrag) > 0, "Drag creates liquid displacement")
+assert(abs(displacementAfterStop) > 0.1, "Liquid displacement persists after drag stops")
 
 print()
 print(String(repeating: "-", count: 60))
-print("TEST 8: Direction Reversal Changes Slope")
+print("TEST 8: Direction Reversal Changes Surface Shape")
 print(String(repeating: "-", count: 60))
 var physics8 = PhysicsEngine()
 
 physics8.applyImpulse(10.0)
 for _ in 0..<20 { physics8.step() }
-let slopePos = physics8.surfaceSlope
+let h0Pos = physics8.surfaceHeight(x: 0, width: 400, time: 0)
 
 physics8.applyImpulse(-10.0)
 for _ in 0..<20 { physics8.step() }
-let slopeNeg = physics8.surfaceSlope
+let h0Neg = physics8.surfaceHeight(x: 0, width: 400, time: 0)
 
-print("  Slope after positive impulse: \(String(format: "%.4f", slopePos))")
-print("  Slope after negative impulse: \(String(format: "%.4f", slopeNeg))")
+print("  Left surface after positive impulse: \(String(format: "%.4f", h0Pos))")
+print("  Left surface after negative impulse: \(String(format: "%.4f", h0Neg))")
 
-assert(slopePos > 0 || slopePos < 0, "Positive impulse creates non-zero slope")
-assert(slopeNeg != slopePos, "Negative impulse changes slope direction")
+assert(h0Pos != h0Neg, "Surface shape changes when direction reverses")
 
 print()
 print(String(repeating: "-", count: 60))
-print("TEST 9: Multiple Waves Contribute")
+print("TEST 9: Multiple Wave Modes Active")
 print(String(repeating: "-", count: 60))
 var physics9 = PhysicsEngine()
 physics9.applyImpulse(30.0)
@@ -286,20 +295,21 @@ assert(w2 > 0, "Wave 2 is also active")
 
 print()
 print(String(repeating: "-", count: 60))
-print("TEST 10: Wave Boundary Reflection")
+print("TEST 10: Asymmetric Surface - Leading vs Trailing Edge")
 print(String(repeating: "-", count: 60))
 var physics10 = PhysicsEngine()
-physics10.applyImpulse(100.0)
+physics10.applyImpulse(20.0)
+for _ in 0..<40 { physics10.step() }
 
-var wave0AfterLargeImpulse: CGFloat = 0
-for _ in 0..<50 {
-    physics10.step()
-    wave0AfterLargeImpulse = physics10.waves[0].amplitude
-}
+let leadingEdge = physics10.surfaceHeight(x: 400, width: 400, time: 0)
+let trailingEdge = physics10.surfaceHeight(x: 0, width: 400, time: 0)
+let difference = abs(leadingEdge - trailingEdge)
 
-print("  Wave 0 amplitude after large impulse: \(String(format: "%.2f", wave0AfterLargeImpulse))")
+print("  Trailing edge (left): \(String(format: "%.2f", trailingEdge))")
+print("  Leading edge (right): \(String(format: "%.2f", leadingEdge))")
+print("  Edge difference: \(String(format: "%.2f", difference))")
 
-assert(abs(wave0AfterLargeImpulse) > 0, "Wave 0 amplitude is non-zero after large impulse")
+assert(difference > 0.5, "Surface has asymmetric height between edges")
 
 print()
 print(String(repeating: "=", count: 60))
