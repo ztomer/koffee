@@ -234,7 +234,15 @@ struct KoffeeContentView: View {
         }
         .onAppear { onAppear() }
         .onAppear { updateCaffeineLevel() }
-        .onChange(of: config.doses) { _, _ in updateCaffeineLevel() }
+        .onChange(of: config.doses) { oldDoses, newDoses in
+            let wasAdded = newDoses.count > oldDoses.count
+            updateCaffeineLevel()
+            if wasAdded {
+                physicsEngine.addSloshImpulse(direction: Double.random(in: 0.5...1.5))
+            } else if newDoses.count < oldDoses.count {
+                physicsEngine.addSloshImpulse(direction: Double.random(in: -1.5 ... -0.5))
+            }
+        }
         .onChange(of: config.weight) { _, _ in updateCaffeineLevel() }
         .onChange(of: config.sensitivity) { _, _ in updateCaffeineLevel() }
         .onChange(of: config.wakeTime) { _, _ in updateCaffeineLevel() }

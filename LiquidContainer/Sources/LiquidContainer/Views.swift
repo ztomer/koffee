@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 public struct LiquidContainerView<Content: View>: View {
     let fillLevel: CGFloat
@@ -22,14 +23,15 @@ public struct LiquidContainerView<Content: View>: View {
     }
     
     public var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0/30.0, paused: false)) { _ in
+        TimelineView(.animation(minimumInterval: 1.0/30.0, paused: false)) { timeline in
             Canvas { context, size in
                 let deltaTime: Double = 1.0 / 30.0
                 physicsEngine.step(deltaTime: deltaTime)
                 
-                let intTime = physicsEngine.internalTime
-                let fillRatio = min(max(fillLevel, 0), configuration.maxFillRatio)
-                let liquidHeight = size.height * fillRatio
+                let currentTime = physicsEngine.internalTime
+                physicsEngine.targetFillLevel = min(max(fillLevel, 0), configuration.maxFillRatio)
+                let animatedFill = min(max(physicsEngine.animatedFillLevel, 0), configuration.maxFillRatio)
+                let liquidHeight = size.height * animatedFill
                 let surfaceY = size.height - liquidHeight
                 
                 guard liquidHeight > 5 else { return }
@@ -65,7 +67,7 @@ public struct LiquidContainerView<Content: View>: View {
                         layerTopY: layerTopY,
                         layerBottomY: layerBottomY,
                         liquidHeight: liquidHeight,
-                        intTime: intTime
+                        intTime: currentTime
                     )
                 }
                 
@@ -85,6 +87,8 @@ public struct LiquidContainerView<Content: View>: View {
                 coupling: configuration.layerConfiguration.waveCoupling,
                 reflection: configuration.layerConfiguration.waveReflectionRatio
             )
+            physicsEngine.animatedFillLevel = min(max(fillLevel, 0), configuration.maxFillRatio)
+            physicsEngine.targetFillLevel = physicsEngine.animatedFillLevel
         }
     }
     
