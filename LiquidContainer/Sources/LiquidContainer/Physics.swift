@@ -52,7 +52,7 @@ public final class LiquidPhysicsEngine: Observable {
     public var logFrame: Int = 0
     
     private var _internalTime: Double = 0
-    private var layerStates: [LayerWaveState] = []
+    public private(set) var layerStates: [LayerWaveState] = []
     private var layerCount: Int = 1
     private var layerDampingFactors: [CGFloat] = []
     private var layerPhaseDelays: [CGFloat] = []

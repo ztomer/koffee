@@ -99,31 +99,19 @@ public struct LiquidContainerView<Content: View>: View {
         liquidHeight: CGFloat,
         intTime: Double
     ) {
-        let prevLayerBottom: CGFloat
-        let nextLayerTop: CGFloat
-        
-        if layerIndex == 0 {
-            prevLayerBottom = surfaceY
-        } else {
-            prevLayerBottom = surfaceY
-        }
-        
-        let maxWaveAmplitude: CGFloat = 15.0
-        
-        let clampedTop = layerTopY
-        let clampedBottom = min(layerBottomY + maxWaveAmplitude, size.height)
+        let layerHeight = layerBottomY - layerTopY
+        guard layerHeight > 2 else { return }
         
         var layerPath = Path()
-        layerPath.move(to: CGPoint(x: 0, y: clampedBottom + 5))
+        layerPath.move(to: CGPoint(x: 0, y: layerBottomY))
         
         for x in stride(from: 0, through: size.width, by: LiquidPhysics.renderWaveStep) {
             let waveOffset = physicsEngine.layerSurfaceHeight(x: x, width: size.width, layerIndex: layerIndex)
-            let clampedWave = max(-clampedTop + prevLayerBottom, min(maxWaveAmplitude, waveOffset))
-            let y = layerTopY + clampedWave
+            let y = layerTopY + waveOffset
             layerPath.addLine(to: CGPoint(x: x, y: y))
         }
         
-        layerPath.addLine(to: CGPoint(x: size.width, y: clampedBottom + 5))
+        layerPath.addLine(to: CGPoint(x: size.width, y: layerBottomY))
         layerPath.addLine(to: CGPoint(x: size.width, y: size.height))
         layerPath.addLine(to: CGPoint(x: 0, y: size.height))
         layerPath.closeSubpath()
@@ -135,15 +123,15 @@ public struct LiquidContainerView<Content: View>: View {
         
         context.fill(layerPath, with: .linearGradient(
             layerGradient,
-            startPoint: CGPoint(x: 0, y: clampedTop),
-            endPoint: CGPoint(x: 0, y: clampedBottom)
+            startPoint: CGPoint(x: 0, y: layerTopY),
+            endPoint: CGPoint(x: 0, y: layerBottomY)
         ))
         
         if layer.hasFoam && layerIndex == 0 {
             renderFoamBubbles(
                 context: context,
                 size: size,
-                surfaceY: surfaceY,
+                surfaceY: layerTopY,
                 foamColor: layer.foamColor,
                 bubbleDensity: layer.bubbleDensity,
                 intTime: intTime
