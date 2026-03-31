@@ -97,25 +97,33 @@ final class LiquidPhysicsEngine: Observable {
     
     func surfaceHeight(x: CGFloat, width: CGFloat, time: Double) -> CGFloat {
         let t = time.truncatingRemainder(dividingBy: 100.0)
-        let normalizedX = (x / width - 0.5) * 2
+        let normalizedX = x / width
         
-        let angleEffect = -surfaceAngle * normalizedX * 2.0
+        let angleEffect = -surfaceAngle * (normalizedX - 0.5) * 2.0
         
-        let displacementEffect = liquidDisplacement * (normalizedX * 0.5 + 0.5) * 1.5
+        let displacementEffect = liquidDisplacement * (normalizedX - 0.5) * 8.0
+        
+        let waveAmplitude = abs(waves[0].amplitude) + abs(waves[1].amplitude) + abs(waves[2].amplitude)
+        let curvature = waveAmplitude * 0.3
+        
+        let curvatureEffect = curvature * sin(normalizedX * .pi * 2.0 + t * 2.0)
+        
+        let nonlinearity = waveAmplitude * 0.2 * sin(normalizedX * .pi * 3.0 + waves[0].phase)
         
         var waveEffect: CGFloat = 0
         let waveFreqs: [CGFloat] = [0.03, 0.05, 0.07]
         let waveSpeeds: [Double] = [1.2, 1.8, 2.4]
         
         for i in 0..<waves.count {
-            let wave = sin(x * waveFreqs[i] + t * waveSpeeds[i] + waves[i].phase) * waves[i].amplitude * 0.15
+            let depthFactor: CGFloat = 1.0 - CGFloat(i) * 0.2
+            let wave = sin(x * waveFreqs[i] + t * waveSpeeds[i] + waves[i].phase) * waves[i].amplitude * 0.3 * depthFactor
             waveEffect += wave
         }
         
-        let ripple1 = sin(x * LiquidPhysics.waveFrequency1 + t * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1 * 0.5
-        let ripple2 = sin(x * LiquidPhysics.waveFrequency2 - t * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2 * 0.5
+        let ripple1 = sin(x * LiquidPhysics.waveFrequency1 + t * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1 * 0.4
+        let ripple2 = sin(x * LiquidPhysics.waveFrequency2 - t * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2 * 0.4
         
-        return angleEffect + displacementEffect + waveEffect + ripple1 + ripple2
+        return angleEffect + displacementEffect + curvatureEffect + nonlinearity + waveEffect + ripple1 + ripple2
     }
 }
 

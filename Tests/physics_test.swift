@@ -95,25 +95,33 @@ struct PhysicsEngine {
     
     func surfaceHeight(x: CGFloat, width: CGFloat, time: Double) -> CGFloat {
         let t = time.truncatingRemainder(dividingBy: 100.0)
-        let normalizedX = (x / width - 0.5) * 2
+        let normalizedX = x / width
         
-        let angleEffect = -surfaceAngle * normalizedX * 2.0
+        let angleEffect = -surfaceAngle * (normalizedX - 0.5) * 2.0
         
-        let displacementEffect = liquidDisplacement * (normalizedX * 0.5 + 0.5) * 1.5
+        let displacementEffect = liquidDisplacement * (normalizedX - 0.5) * 8.0
+        
+        let waveAmplitude = abs(waves[0].amplitude) + abs(waves[1].amplitude) + abs(waves[2].amplitude)
+        let curvature = waveAmplitude * 0.3
+        
+        let curvatureEffect = curvature * sin(normalizedX * .pi * 2.0 + t * 2.0)
+        
+        let nonlinearity = waveAmplitude * 0.2 * sin(normalizedX * .pi * 3.0 + waves[0].phase)
         
         var waveEffect: CGFloat = 0
         let waveFreqs: [CGFloat] = [0.03, 0.05, 0.07]
         let waveSpeeds: [Double] = [1.2, 1.8, 2.4]
         
         for i in 0..<waves.count {
-            let wave = sin(x * waveFreqs[i] + t * waveSpeeds[i] + waves[i].phase) * waves[i].amplitude * 0.15
+            let depthFactor: CGFloat = 1.0 - CGFloat(i) * 0.2
+            let wave = sin(x * waveFreqs[i] + t * waveSpeeds[i] + waves[i].phase) * waves[i].amplitude * 0.3 * depthFactor
             waveEffect += wave
         }
         
-        let ripple1 = sin(x * LiquidPhysics.waveFrequency1 + t * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1 * 0.5
-        let ripple2 = sin(x * LiquidPhysics.waveFrequency2 - t * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2 * 0.5
+        let ripple1 = sin(x * LiquidPhysics.waveFrequency1 + t * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1 * 0.4
+        let ripple2 = sin(x * LiquidPhysics.waveFrequency2 - t * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2 * 0.4
         
-        return angleEffect + displacementEffect + waveEffect + ripple1 + ripple2
+        return angleEffect + displacementEffect + curvatureEffect + nonlinearity + waveEffect + ripple1 + ripple2
     }
 }
 
@@ -310,6 +318,30 @@ print("  Leading edge (right): \(String(format: "%.2f", leadingEdge))")
 print("  Edge difference: \(String(format: "%.2f", difference))")
 
 assert(difference > 0.5, "Surface has asymmetric height between edges")
+
+print()
+print(String(repeating: "-", count: 60))
+print("TEST 11: Surface Has Curvature (Not Just Linear)")
+print(String(repeating: "-", count: 60))
+var physics11 = PhysicsEngine()
+physics11.applyImpulse(25.0)
+for _ in 0..<50 { physics11.step() }
+
+let h50 = physics11.surfaceHeight(x: 50, width: 400, time: 0)
+let h100 = physics11.surfaceHeight(x: 100, width: 400, time: 0)
+let h150 = physics11.surfaceHeight(x: 150, width: 400, time: 0)
+
+let linearSlope = (h150 - h50) / 100.0
+let expectedH100 = h50 + linearSlope * 50.0
+let curvature = abs(h100 - expectedH100)
+
+print("  Height at x=50: \(String(format: "%.2f", h50))")
+print("  Height at x=100: \(String(format: "%.2f", h100))")
+print("  Height at x=150: \(String(format: "%.2f", h150))")
+print("  Expected (linear) at x=100: \(String(format: "%.2f", expectedH100))")
+print("  Curvature deviation: \(String(format: "%.2f", curvature))")
+
+assert(curvature > 0.3, "Surface deviates from linear (has curvature)")
 
 print()
 print(String(repeating: "=", count: 60))
