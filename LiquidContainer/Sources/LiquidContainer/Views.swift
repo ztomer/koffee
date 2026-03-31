@@ -184,29 +184,44 @@ public struct LiquidContainerView<Content: View>: View {
         bubbleDensity: CGFloat,
         intTime: Double
     ) {
-        let bubbleCount = Int(30 * bubbleDensity)
+        let bubbleCount = Int(50 * bubbleDensity)
+        let cremaDepth = size.height * 0.12 * bubbleDensity
         
         for i in 0..<bubbleCount {
             let seed = i * 7919
-            let x = CGFloat(seed % Int(size.width - 20)) + 10
-            let baseY = CGFloat((seed / 100) % Int(30)) + surfaceY + 5
-            let bubbleSize = CGFloat(3 + (seed % 5))
+            let xBase = CGFloat(seed % Int(size.width - 10)) + 5
+            let depthInCrema = CGFloat((seed / 100) % Int(max(cremaDepth, 5)))
+            let bubbleSize = CGFloat(2 + (seed % 3))
             
-            let wobble = sin(intTime * LiquidPhysics.waveSpeed1 + Double(i) * 0.5) * 2
-            let currentX = x + CGFloat(wobble)
-            let currentY = baseY + sin(intTime * 0.3 + Double(i)) * 1.5
+            let waveOffset = physicsEngine.layerSurfaceHeight(x: xBase, width: size.width, layerIndex: 0)
+            let currentSurfaceY = surfaceY + waveOffset
             
-            let alpha = 0.15 + Double(seed % 20) / 100.0
+            let phaseX = Double(seed % 100) * 0.1
+            let speedX = 0.5 + Double(seed % 3) * 0.2
+            
+            let offsetX = sin(intTime * speedX + phaseX) * 2
+            let offsetY = sin(intTime * 0.3 + Double(i)) * 0.5
+            
+            let currentX = xBase + CGFloat(offsetX)
+            let currentY = currentSurfaceY + depthInCrema + CGFloat(offsetY)
+            
+            let brightness = 0.7 + Double(seed % 30) / 100.0
+            let bubbleColor = Color(
+                red: brightness * 0.95,
+                green: brightness * 0.85,
+                blue: brightness * 0.65
+            )
+            let alpha = 0.3 + Double(seed % 40) / 100.0
             
             var bubblePath = Path()
             bubblePath.addEllipse(in: CGRect(
                 x: currentX,
                 y: currentY,
                 width: bubbleSize,
-                height: bubbleSize * 0.8
+                height: bubbleSize * 0.9
             ))
             
-            context.fill(bubblePath, with: .color(foamColor.opacity(alpha)))
+            context.fill(bubblePath, with: .color(bubbleColor.opacity(alpha)))
         }
     }
 }

@@ -103,7 +103,9 @@ public final class LiquidPhysicsEngine: Observable {
     public func step(deltaTime: Double) {
         _internalTime += deltaTime
         
-        let accel = containerAccelX
+        let ambientAccel = sin(_internalTime * 1.7) * 0.02 + sin(_internalTime * 2.3) * 0.015 + sin(_internalTime * 3.1) * 0.01
+        
+        let accel = containerAccelX + ambientAccel
         containerAccelX *= LiquidPhysics.accelerationDecay
         
         containerVelocityX += accel * 0.5
@@ -216,6 +218,8 @@ public final class LiquidPhysicsEngine: Observable {
         let angleEffect = -layerAngle * (normalizedX - 0.5) * 1.0
         let displacementEffect = layerDisp * (normalizedX - 0.5) * 2.0
         
+        let waveDrift = layerDisp * 0.5 * cos(t * 0.5) * layerDamping
+        
         let waveAmplitude = localWaves.reduce(CGFloat(0)) { $0 + abs($1.amplitude) }
         let curvature = waveAmplitude * 0.15 * layerDamping
         
@@ -238,7 +242,9 @@ public final class LiquidPhysicsEngine: Observable {
         let ripple1 = sin(x * LiquidPhysics.waveFrequency1 + t * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1 * 0.1 * rippleDamping
         let ripple2 = sin(x * LiquidPhysics.waveFrequency2 - t * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2 * 0.1 * rippleDamping
         
-        return angleEffect + displacementEffect + curvatureEffect + nonlinearity + waveEffect + ripple1 + ripple2
+        let total = angleEffect + displacementEffect + waveDrift + curvatureEffect + nonlinearity + waveEffect + ripple1 + ripple2
+        
+        return total
     }
     
     public func bottomWaveOffset(x: CGFloat, width: CGFloat) -> CGFloat {
