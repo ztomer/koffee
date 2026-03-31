@@ -190,28 +190,37 @@ public final class LiquidPhysicsEngine: Observable {
     
     private func baseSurfaceHeight(x: CGFloat, width: CGFloat, layerIndex: Int) -> CGFloat {
         let normalizedX = x / width
-        let t = _internalTime
         
-        var angle = surfaceAngle
-        var disp = liquidDisplacement
-        var localWaves = waves
+        var layerAngle: CGFloat
+        var layerDisp: CGFloat
+        var localWaves: [WaveState]
+        var layerDamping: CGFloat
+        var phaseDelay: CGFloat
         
         if layerIndex > 0 && layerIndex < layerStates.count {
-            let phaseDelay = layerStates[layerIndex].phaseDelay
-            let delayedTime = t - Double(phaseDelay)
-            angle = surfaceAngle * CGFloat(cos(Double(phaseDelay)))
-            disp = liquidDisplacement * CGFloat(cos(Double(phaseDelay)))
+            layerAngle = layerStates[layerIndex].surfaceAngle
+            layerDisp = layerStates[layerIndex].displacement
             localWaves = layerStates[layerIndex].waves
+            layerDamping = layerStates[layerIndex].waveDamping
+            phaseDelay = layerStates[layerIndex].phaseDelay
+        } else {
+            layerAngle = surfaceAngle
+            layerDisp = liquidDisplacement
+            localWaves = waves
+            layerDamping = 1.0
+            phaseDelay = 0.0
         }
         
-        let angleEffect = -angle * (normalizedX - 0.5) * 2.0
-        let displacementEffect = disp * (normalizedX - 0.5) * 8.0
+        let t = _internalTime - Double(phaseDelay)
+        
+        let angleEffect = -layerAngle * (normalizedX - 0.5) * 1.0
+        let displacementEffect = layerDisp * (normalizedX - 0.5) * 2.0
         
         let waveAmplitude = localWaves.reduce(CGFloat(0)) { $0 + abs($1.amplitude) }
-        let curvature = waveAmplitude * 0.3
+        let curvature = waveAmplitude * 0.15 * layerDamping
         
         let curvatureEffect = curvature * sin(normalizedX * .pi * 2.0 + t * 2.0)
-        let nonlinearity = waveAmplitude * 0.15 * sin(normalizedX * .pi * 3.0 + t * 1.5)
+        let nonlinearity = waveAmplitude * 0.08 * layerDamping * sin(normalizedX * .pi * 3.0 + t * 1.5)
         
         var waveEffect: CGFloat = 0
         
@@ -221,12 +230,13 @@ public final class LiquidPhysicsEngine: Observable {
             let speedMult = i < LiquidPhysics.waveSpeedMultipliers.count ? LiquidPhysics.waveSpeedMultipliers[i] : 0.8 + Double(i) * 0.3
             let depthFactor = i < LiquidPhysics.waveDepthFactors.count ? LiquidPhysics.waveDepthFactors[i] : 1.0 - CGFloat(i) * 0.15
             
-            let wave = sin(x * freq + t * speedMult + phaseOffset) * localWaves[i].amplitude * 0.25 * depthFactor
+            let wave = sin(x * freq + t * speedMult + phaseOffset) * localWaves[i].amplitude * 0.15 * depthFactor * layerDamping
             waveEffect += wave
         }
         
-        let ripple1 = sin(x * LiquidPhysics.waveFrequency1 + t * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1 * 0.3
-        let ripple2 = sin(x * LiquidPhysics.waveFrequency2 - t * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2 * 0.3
+        let rippleDamping = layerDamping * 0.4
+        let ripple1 = sin(x * LiquidPhysics.waveFrequency1 + t * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1 * 0.1 * rippleDamping
+        let ripple2 = sin(x * LiquidPhysics.waveFrequency2 - t * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2 * 0.1 * rippleDamping
         
         return angleEffect + displacementEffect + curvatureEffect + nonlinearity + waveEffect + ripple1 + ripple2
     }

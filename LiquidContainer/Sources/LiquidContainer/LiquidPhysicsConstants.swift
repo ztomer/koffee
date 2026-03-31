@@ -13,14 +13,14 @@ public struct LiquidPhysics {
     public static let waveFrequency2: CGFloat = 0.025
     public static let waveSpeed1: Double = 0.8
     public static let waveSpeed2: Double = 0.6
-    public static let waveAmplitude1: CGFloat = 3
-    public static let waveAmplitude2: CGFloat = 2
+    public static let waveAmplitude1: CGFloat = 2
+    public static let waveAmplitude2: CGFloat = 1.5
     
     public static let waveFrequencies: [CGFloat] = [0.015, 0.025, 0.035]
     public static let wavePhaseOffsets: [Double] = [0.0, 2.0, 4.0]
     public static let waveSpeedMultipliers: [Double] = [0.8, 1.1, 1.4]
     public static let waveDepthFactors: [CGFloat] = [1.0, 0.85, 0.7]
-    public static let waveMaxAmplitudes: [CGFloat] = [15.0, 12.0, 9.0]
+    public static let waveMaxAmplitudes: [CGFloat] = [8.0, 6.0, 4.0]
     public static let waveCoupling: [CGFloat] = [0.5, 0.2, 0.1]
     
     public static let minLiquidHeightForBubbles: CGFloat = 30
