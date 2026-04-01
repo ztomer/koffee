@@ -17,7 +17,8 @@ let package = Package(
             name: "LiquidContainer",
             dependencies: [],
             resources: [
-                .copy("default_config.json")
+                .copy("default_config.json"),
+                .copy("liquid_config.json")
             ]
         ),
         .testTarget(
