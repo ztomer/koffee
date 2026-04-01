@@ -29,16 +29,20 @@ struct EditableTimePicker: View {
                 .frame(width: 50)
                 .multilineTextAlignment(.center)
                 .focused($isFocused)
+                .onChange(of: textValue) { _, newValue in
+                    let filtered = newValue.filter { $0.isNumber || $0 == ":" }
+                    if filtered != newValue {
+                        textValue = filtered
+                    }
+                    if newValue.count == 2 && !newValue.contains(":") {
+                        textValue = newValue + ":"
+                    }
+                }
                 .onChange(of: isFocused) { _, newValue in
                     if newValue {
                         textValue = timeFormatter.string(from: selection)
                     } else {
                         parseAndUpdateTime()
-                    }
-                }
-                .onChange(of: textValue) { _, newValue in
-                    if newValue.count == 2 {
-                        textValue += ":"
                     }
                 }
             

@@ -25,6 +25,11 @@ func clearDebugLog() {
     try? FileManager.default.removeItem(at: debugLogURL)
 }
 
+class KoffeeWindow: NSWindow {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+}
+
 struct TrafficLightButton: View {
     let color: Color
     let action: () -> Void
@@ -45,9 +50,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var initialDosesAdded = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let windowSize = (width: 400.0, height: 650.0)
+        let windowSize = (width: 500.0, height: 650.0)
         
-        window = NSWindow(
+        window = KoffeeWindow(
             contentRect: NSRect(x: 0, y: 0, width: windowSize.width, height: windowSize.height),
             styleMask: [.closable, .miniaturizable, .resizable],
             backing: .buffered,
@@ -57,8 +62,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.title = "Koffee"
         window.center()
         window.isReleasedWhenClosed = false
-        window.isOpaque = true
-        window.backgroundColor = NSColor.windowBackgroundColor
+        window.isOpaque = false
+        window.backgroundColor = NSColor.clear
         window.hasShadow = true
         window.minSize = NSSize(width: 360, height: 600)
         window.maxSize = NSSize(width: 500, height: 900)
@@ -89,6 +94,8 @@ struct KoffeeContentView: View {
     
     @State private var physicsEngine = LiquidPhysicsEngine()
     @State private var lastWindowPos: CGPoint? = nil
+    @State private var weightText: String = ""
+    @FocusState private var isWeightFocused: Bool
 
     var safeLimit: Double {
         config.sensitivity.safeCaffeineAtBedtime
@@ -322,12 +329,30 @@ struct KoffeeContentView: View {
                 .foregroundStyle(.secondary)
             
             HStack {
-                TextField("kg", value: $config.weight, format: .number)
+                TextField("kg", text: $weightText)
                     .textFieldStyle(.plain)
                     .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
                     .frame(width: 60)
+                    .focused($isWeightFocused)
+                    .onChange(of: weightText) { _, newValue in
+                        let filtered = newValue.filter { $0.isNumber }
+                        if filtered != newValue {
+                            weightText = filtered
+                        }
+                        if let weight = Double(filtered) {
+                            config.weight = min(max(weight, 20), 200)
+                        }
+                    }
+                    .onChange(of: isWeightFocused) { _, newValue in
+                        if newValue {
+                            weightText = String(format: "%.0f", config.weight)
+                        }
+                    }
+                    .onAppear {
+                        weightText = String(format: "%.0f", config.weight)
+                    }
                 
                 Text("kg")
                     .font(.system(size: 14, weight: .medium))
@@ -510,16 +535,17 @@ struct SensitivityButton: View {
     
     var body: some View {
         Button(action: action) {
-            Text(sensitivity.displayName.prefix(1))
-                .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(isSelected ? .white : .secondary)
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(isSelected ? Color.orange : Color.clear)
+                
+                Text(sensitivity.displayName.prefix(1))
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(isSelected ? .white : .secondary)
+            }
         }
         .buttonStyle(.plain)
         .frame(width: 44, height: 44)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(isSelected ? Color.orange : Color.clear)
-        )
     }
 }
 
