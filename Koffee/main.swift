@@ -50,7 +50,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var initialDosesAdded = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let windowSize = (width: 500.0, height: 650.0)
+        let windowSize = (width: 400.0, height: 650.0)
         
         window = KoffeeWindow(
             contentRect: NSRect(x: 0, y: 0, width: windowSize.width, height: windowSize.height),
@@ -330,23 +330,26 @@ struct KoffeeContentView: View {
             
             HStack {
                 TextField("kg", text: $weightText)
-                    .textFieldStyle(.plain)
+                    .textFieldStyle(.roundedBorder)
                     .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
-                    .frame(width: 60)
+                    .frame(width: 80)
                     .focused($isWeightFocused)
                     .onChange(of: weightText) { _, newValue in
                         let filtered = newValue.filter { $0.isNumber }
                         if filtered != newValue {
                             weightText = filtered
                         }
-                        if let weight = Double(filtered) {
+                        if let weight = Double(filtered), !filtered.isEmpty {
                             config.weight = min(max(weight, 20), 200)
+                        } else if filtered.isEmpty {
+                            weightText = "0"
+                            config.weight = 20
                         }
                     }
                     .onChange(of: isWeightFocused) { _, newValue in
-                        if newValue {
+                        if !newValue {
                             weightText = String(format: "%.0f", config.weight)
                         }
                     }
@@ -358,11 +361,8 @@ struct KoffeeContentView: View {
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.secondary)
             }
-            .padding(12)
-            .background(.ultraThinMaterial)
-            .clipShape(.rect(cornerRadius: 10))
+            .frame(maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity)
     }
     
     private var sensitivityControl: some View {

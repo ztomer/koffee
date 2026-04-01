@@ -22,27 +22,46 @@ struct EditableTimePicker: View {
     }
     
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 8) {
             TextField("HH:MM", text: $textValue)
-                .textFieldStyle(.plain)
-                .font(.system(size: 14, weight: .medium))
-                .frame(width: 50)
+                .textFieldStyle(.roundedBorder)
+                .font(.system(size: 16, weight: .medium))
+                .frame(width: 80)
                 .multilineTextAlignment(.center)
                 .focused($isFocused)
                 .onChange(of: textValue) { _, newValue in
                     let filtered = newValue.filter { $0.isNumber || $0 == ":" }
                     if filtered != newValue {
                         textValue = filtered
+                        return
                     }
+                    
                     if newValue.count == 2 && !newValue.contains(":") {
+                        let hour = Int(newValue) ?? 0
+                        if hour > 23 {
+                            textValue = String(newValue.prefix(1))
+                            return
+                        }
                         textValue = newValue + ":"
+                        return
+                    }
+                    
+                    let components = textValue.split(separator: ":").compactMap { Int($0) }
+                    if components.count == 2 {
+                        let hour = min(max(components[0], 0), 23)
+                        let minute = min(max(components[1], 0), 59)
+                        var dateComponents = calendar.dateComponents([.year, .month, .day], from: selection)
+                        dateComponents.hour = hour
+                        dateComponents.minute = minute
+                        if let newDate = calendar.date(from: dateComponents) {
+                            selection = newDate
+                            textValue = String(format: "%02d:%02d", hour, minute)
+                        }
                     }
                 }
                 .onChange(of: isFocused) { _, newValue in
-                    if newValue {
+                    if !newValue {
                         textValue = timeFormatter.string(from: selection)
-                    } else {
-                        parseAndUpdateTime()
                     }
                 }
             
@@ -61,10 +80,9 @@ struct EditableTimePicker: View {
             .labelsHidden()
             .controlSize(.small)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
+        .padding(8)
         .background(.ultraThinMaterial)
-        .clipShape(.rect(cornerRadius: 6))
+        .clipShape(.rect(cornerRadius: 8))
         .onAppear {
             textValue = timeFormatter.string(from: selection)
         }
