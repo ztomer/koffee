@@ -169,6 +169,32 @@ public final class LiquidPhysicsEngine: Observable {
             }
         }
         
+        // Gradual slosh application over time
+        if pendingSloshRemaining > 0 {
+            let sloshDirection = pendingSlosh ?? 1.0
+            let fraction = pendingSloshRemaining / pendingSloshDuration
+            let currentStrength = pendingSloshStrength * fraction * CGFloat(deltaTime)
+            
+            containerAccelX += sloshDirection * currentStrength
+            angleVelocity += sloshDirection * currentStrength * 0.6
+            displacementVelocity += sloshDirection * currentStrength * 0.4
+            
+            for (index, layerMultiplier) in LiquidPhysics.sloshLayerMultiplier.enumerated() where index < layerStates.count {
+                layerStates[index].angleVelocity += sloshDirection * currentStrength * layerMultiplier * 0.4
+                layerStates[index].displacementVelocity += sloshDirection * currentStrength * layerMultiplier * 0.3
+                if index < layerStates[index].waves.count {
+                    layerStates[index].waves[0].velocity += sloshDirection * currentStrength * layerMultiplier * 0.5
+                    layerStates[index].waves[1].velocity += sloshDirection * currentStrength * layerMultiplier * 0.3
+                }
+            }
+            
+            pendingSloshRemaining -= deltaTime
+            if pendingSloshRemaining <= 0 {
+                pendingSlosh = nil
+                pendingSloshRemaining = 0
+            }
+        }
+        
         var accel = containerAccelX
         
         if LiquidPhysics.ambientMotionEnabled {
@@ -289,22 +315,21 @@ public final class LiquidPhysicsEngine: Observable {
     }
     
     public func addSloshImpulse(direction: CGFloat = 1.0) {
+        addSloshImpulseGradual(direction: direction, duration: 0.5)
+    }
+    
+    public func addSloshImpulseGradual(direction: CGFloat = 1.0, duration: Double = 0.5) {
         pendingSlosh = direction
+        pendingSloshDuration = duration
+        pendingSloshRemaining = duration
         
         let strength = direction > 0 ? LiquidPhysics.pourWaveStrength : LiquidPhysics.settleWaveStrength
-        containerAccelX += direction * strength
-        angleVelocity += direction * strength * 0.6
-        displacementVelocity += direction * strength * 0.4
-        
-        for (index, layerMultiplier) in LiquidPhysics.sloshLayerMultiplier.enumerated() where index < layerStates.count {
-            layerStates[index].angleVelocity += direction * strength * layerMultiplier * 0.4
-            layerStates[index].displacementVelocity += direction * strength * layerMultiplier * 0.3
-            if index < layerStates[index].waves.count {
-                layerStates[index].waves[0].velocity += direction * strength * layerMultiplier * 0.5
-                layerStates[index].waves[1].velocity += direction * strength * layerMultiplier * 0.3
-            }
-        }
+        pendingSloshStrength = direction * strength
     }
+    
+    private var pendingSloshDuration: Double = 0
+    private var pendingSloshRemaining: Double = 0
+    private var pendingSloshStrength: CGFloat = 0
     
     private func updateAdvancedPhysicsEffects(accel: CGFloat, deltaTime: Double) {
         let baseViscosity = LiquidPhysics.viscosityBase
@@ -559,6 +584,20 @@ public final class LiquidPhysicsEngine: Observable {
         rotationVelocity = 0
         vortexIntensity = 0
         bubbleCoalescenceRate = LiquidPhysics.coalescenceRate
+        pendingSlosh = nil
+        pendingSloshDuration = 0
+        pendingSloshRemaining = 0
+        pendingSloshStrength = 0
+        pressureGradient = 0
+        layerDensities = []
+        acousticPressure = 0
+        acousticVelocity = 0
+        capillaryWaveAmplitude = 0
+        khInstability = 0
+        wettingContactLine = LiquidPhysics.wettingContactAngle
+        meniscusCurvature = LiquidPhysics.meniscusCurvatureStrength
+        cremaElasticEnergy = 0
+        extractionCO2 = LiquidPhysics.extractionCO2Release
         for i in 0..<waves.count {
             waves[i] = WaveState()
         }
