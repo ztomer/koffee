@@ -67,6 +67,34 @@ public final class LiquidPhysicsEngine: Observable {
     public var vortexIntensity: CGFloat = 0  // vortex shedding activity
     public var bubbleCoalescenceRate: CGFloat = 0.02
     
+    // 8. Pressure Gradients
+    public var pressureGradient: CGFloat = 0
+    
+    // 9. Density Stratification
+    public var layerDensities: [CGFloat] = []
+    
+    // 10. Acoustic Resonance
+    public var acousticPressure: CGFloat = 0
+    public var acousticVelocity: CGFloat = 0
+    
+    // 11. Capillary Waves
+    public var capillaryWaveAmplitude: CGFloat = 0
+    
+    // 12. Kelvin-Helmholtz Instability
+    public var khInstability: CGFloat = 0
+    
+    // 13. Wetting Behavior
+    public var wettingContactLine: CGFloat = 0.4
+    
+    // 14. Meniscus Curvature
+    public var meniscusCurvature: CGFloat = 0.06
+    
+    // 15. Crema Dynamics
+    public var cremaElasticEnergy: CGFloat = 0
+    
+    // 16. Extraction Effects
+    public var extractionCO2: CGFloat = 0.08
+    
     private var _internalTime: Double = 0
     public private(set) var layerStates: [LayerWaveState] = []
     private var layerCount: Int = 1
@@ -317,6 +345,93 @@ public final class LiquidPhysicsEngine: Observable {
             let vortexDisturb = vortexIntensity * LiquidPhysics.foamCollapseVortexDisturb
             let collapseRate = LiquidPhysics.foamCollapseRate * (visCollapse + stCollapse + thermalCollapse + vortexDisturb)
             foamStability = max(0, min(1.0, foamStability - collapseRate))
+        }
+        
+        // 8. Pressure Gradients
+        if LiquidPhysics.pressureGradientEnabled {
+            let basePressure = abs(surfaceAngle) * LiquidPhysics.pressureGradientStrength
+            let densityFactor = layerCount > 0 ? CGFloat(layerCount) / 3.0 : 0.5
+            pressureGradient = basePressure * densityFactor * (1.0 + viscosity * 0.1)
+        }
+        
+        // 9. Density Stratification
+        if LiquidPhysics.densityStratificationEnabled {
+            if layerDensities.isEmpty {
+                layerDensities = (0..<max(layerCount, 1)).map { i in
+                    switch i {
+                    case 0: return LiquidPhysics.densityCrema
+                    case 1: return LiquidPhysics.densityLiquid
+                    default: return LiquidPhysics.densityDense
+                    }
+                }
+            }
+            let densityWaveEffect = layerDensities.reduce(0, +) / CGFloat(max(layerDensities.count, 1))
+            pressureGradient += densityWaveEffect * LiquidPhysics.densityPressureFactor * abs(surfaceAngle) * 0.1
+        }
+        
+        // 10. Acoustic Resonance
+        if LiquidPhysics.acousticEnabled {
+            let acousticAccel = accel * LiquidPhysics.acousticVelocityCoupling
+            acousticVelocity += acousticAccel
+            acousticVelocity += liquidDisplacement * LiquidPhysics.acousticDisplacementCoupling * 0.01
+            acousticVelocity *= LiquidPhysics.acousticDamping
+            acousticPressure = sin(_internalTime * LiquidPhysics.acousticFrequency) * acousticVelocity * CGFloat(LiquidPhysics.acousticWaveSpeed)
+        }
+        
+        // 11. Capillary Waves
+        if LiquidPhysics.capillaryEnabled {
+            let capSTFactor = surfaceTension * LiquidPhysics.capillarySurfaceTensionFactor
+            let capViscosityDamp = 1.0 - viscosity * LiquidPhysics.capillaryViscosityDamping
+            capillaryWaveAmplitude = LiquidPhysics.capillaryAmplitude * capSTFactor * capViscosityDamp * (1.0 + sin(_internalTime * LiquidPhysics.capillarySpeed) * 0.3)
+        }
+        
+        // 12. Kelvin-Helmholtz Instability
+        if LiquidPhysics.khInstabilityEnabled {
+            var totalShear: CGFloat = 0
+            for i in 0..<max(layerStates.count - 1, 0) {
+                let layer1Vel = layerStates[i].surfaceAngle
+                let layer2Vel = layerStates[i + 1].surfaceAngle
+                totalShear += abs(layer1Vel - layer2Vel)
+            }
+            if totalShear > LiquidPhysics.khShearThreshold {
+                let khGrowth = (totalShear - LiquidPhysics.khShearThreshold) * LiquidPhysics.khGrowthRate
+                let khDensity = LiquidPhysics.densityStratificationEnabled ? LiquidPhysics.khDensityContrastFactor : 0.1
+                let khViscosityStab = 1.0 - viscosity * LiquidPhysics.khViscosityStabilization
+                khInstability += khGrowth * khDensity * khViscosityStab
+            }
+            khInstability *= LiquidPhysics.khDamping
+            khInstability = min(khInstability, 1.0)
+        }
+        
+        // 13. Wetting Behavior
+        if LiquidPhysics.wettingEnabled {
+            let baseContact = LiquidPhysics.wettingContactAngle
+            let tempEffect = (liquidTemperature - 0.5) * 0.1
+            wettingContactLine = baseContact + tempEffect
+        }
+        
+        // 14. Meniscus Curvature
+        if LiquidPhysics.meniscusEnabled {
+            let stEffect = surfaceTension * LiquidPhysics.meniscusSurfaceTensionEffect
+            let visEffect = viscosity * LiquidPhysics.meniscusViscosityEffect
+            let presEffect = abs(surfaceAngle) * LiquidPhysics.meniscusPressureEffect
+            meniscusCurvature = LiquidPhysics.meniscusCurvatureStrength * 0.3 * (1.0 + stEffect + visEffect + presEffect)
+        }
+        
+        // 15. Crema Dynamics
+        if LiquidPhysics.cremaDynamicsEnabled && layerStates.count > 0 {
+            let creElastic = surfaceAngle * LiquidPhysics.cremaElasticity
+            let creDamp = 1.0 - viscosity * LiquidPhysics.cremaDamping
+            cremaElasticEnergy += creElastic * creDamp
+            cremaElasticEnergy *= (1.0 - LiquidPhysics.cremaDamping * 0.1)
+        }
+        
+        // 16. Extraction Effects (CO2 release)
+        if LiquidPhysics.extractionEnabled {
+            let tempEffect = liquidTemperature * LiquidPhysics.extractionTemperatureEffect
+            extractionCO2 *= (1.0 - LiquidPhysics.extractionDecayRate)
+            extractionCO2 += tempEffect * LiquidPhysics.extractionCO2Release * 0.1
+            extractionCO2 = min(extractionCO2, LiquidPhysics.extractionCO2Release)
         }
     }
     
