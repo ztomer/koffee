@@ -57,8 +57,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.title = "Koffee"
         window.center()
         window.isReleasedWhenClosed = false
-        window.isOpaque = false
-        window.backgroundColor = .clear
+        window.isOpaque = true
+        window.backgroundColor = NSColor.windowBackgroundColor
         window.hasShadow = true
         window.minSize = NSSize(width: 360, height: 600)
         window.maxSize = NSSize(width: 500, height: 900)
@@ -311,7 +311,8 @@ struct KoffeeContentView: View {
             }
         }
         .padding(16)
-        .glassEffect(.regular, in: .rect(cornerRadius: 16))
+        .background(.ultraThinMaterial)
+        .clipShape(.rect(cornerRadius: 16))
     }
     
     private var weightControl: some View {
@@ -327,14 +328,14 @@ struct KoffeeContentView: View {
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
                     .frame(width: 60)
-                    .focusable()
                 
                 Text("kg")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.secondary)
             }
             .padding(12)
-            .glassEffect(.regular, in: .rect(cornerRadius: 10))
+            .background(.ultraThinMaterial)
+            .clipShape(.rect(cornerRadius: 10))
         }
         .frame(maxWidth: .infinity)
     }
@@ -364,12 +365,7 @@ struct KoffeeContentView: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.secondary)
             
-            DatePicker("", selection: $config.wakeTime, displayedComponents: .hourAndMinute)
-                .datePickerStyle(.compact)
-                .labelsHidden()
-                .padding(12)
-                .focusable()
-                .glassEffect(.regular, in: .rect(cornerRadius: 10))
+            EditableTimePicker(selection: $config.wakeTime)
         }
         .frame(maxWidth: .infinity)
     }
@@ -380,12 +376,7 @@ struct KoffeeContentView: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.secondary)
             
-            DatePicker("", selection: $config.sleepTime, displayedComponents: .hourAndMinute)
-                .datePickerStyle(.compact)
-                .labelsHidden()
-                .padding(12)
-                .focusable()
-                .glassEffect(.regular, in: .rect(cornerRadius: 10))
+            EditableTimePicker(selection: $config.sleepTime)
         }
         .frame(maxWidth: .infinity)
     }
@@ -432,10 +423,12 @@ struct KoffeeContentView: View {
                     .padding(.vertical, 12)
             }
             .buttonStyle(.plain)
-            .glassEffect(.regular, in: .rect(cornerRadius: 12))
+            .background(.ultraThinMaterial)
+            .clipShape(.rect(cornerRadius: 12))
         }
         .padding(16)
-        .glassEffect(.regular, in: .rect(cornerRadius: 16))
+        .background(.ultraThinMaterial)
+        .clipShape(.rect(cornerRadius: 16))
     }
     
     private var statusText: String {
@@ -486,15 +479,12 @@ struct DoseRowView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            DatePicker("", selection: $dose.time, displayedComponents: .hourAndMinute)
-                .datePickerStyle(.compact)
-                .labelsHidden()
-                .frame(width: 80)
-                .focusable()
+            EditableTimePicker(selection: $dose.time)
+                .frame(width: 100)
             
             Picker("", selection: $dose.beverageIndex) {
                 ForEach(Array(beverages.enumerated()), id: \.offset) { index, beverage in
-                    Text("\(beverage.icon) \(beverage.name)")
+                    Text("\(beverage.icon) \(beverage.name) - \(beverage.caffeineMg)mg")
                         .tag(index)
                 }
             }
@@ -508,7 +498,8 @@ struct DoseRowView: View {
             .buttonStyle(.plain)
         }
         .padding(12)
-        .glassEffect(.regular, in: .rect(cornerRadius: 12))
+        .background(.ultraThinMaterial)
+        .clipShape(.rect(cornerRadius: 12))
     }
 }
 
@@ -522,12 +513,13 @@ struct SensitivityButton: View {
             Text(sensitivity.displayName.prefix(1))
                 .font(.system(size: 14, weight: .bold))
                 .foregroundStyle(isSelected ? .white : .secondary)
-                .frame(width: 44, height: 44)
-                .background(isSelected ? Color.orange : Color.clear)
-                .clipShape(.rect(cornerRadius: 10))
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular, in: .rect(cornerRadius: 10))
+        .frame(width: 44, height: 44)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(isSelected ? Color.orange : Color.clear)
+        )
     }
 }
 

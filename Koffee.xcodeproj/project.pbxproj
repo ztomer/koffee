@@ -10,30 +10,56 @@
 		295BA1E91D05F18A94A9B136 /* config.json in Resources */ = {isa = PBXBuildFile; fileRef = 6DDE676D391102A037E2B315 /* config.json */; };
 		2ED001B1EA998581B414AD94 /* LiquidContainer in Frameworks */ = {isa = PBXBuildFile; productRef = 37552910EB30764730AF2F2E /* LiquidContainer */; };
 		303DC01E0D86D28DA483E3FB /* beverages.json in Resources */ = {isa = PBXBuildFile; fileRef = AEE29E5F6955FCD217F979DA /* beverages.json */; };
+		38147D2723F080B6C8F5E7BF /* InputTypingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99A40880453F61A0EA03D788 /* InputTypingTests.swift */; };
 		430DF6D927B801F31C9CDF91 /* Design.swift in Sources */ = {isa = PBXBuildFile; fileRef = F99F13FA86A4F2647EF46C1A /* Design.swift */; };
 		51127499C6C678181549D11A /* ConfigManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD54509E672E4950D2F2508 /* ConfigManager.swift */; };
 		55DC42015ABA46706A8D4158 /* CaffeineCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B66235F2B73372234391FDA /* CaffeineCalculator.swift */; };
 		5EBC1529330648E1A4B7D32A /* CaffeineMeterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE1CCCF6A9602672053A5029 /* CaffeineMeterView.swift */; };
+		6C93B754AD8A74E031C5223A /* KoffeeUIInteractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1D054A23F9C2BB5C63A725A /* KoffeeUIInteractionTests.swift */; };
 		7F65043F0D5695188B559561 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = B827BC801C03CBC40FA0E3C3 /* main.swift */; };
+		A73D2EAB64C9E2129E7561CF /* EditableTimePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04C0BE035BA09901B793C38E /* EditableTimePicker.swift */; };
+		B5284440730BECD4C4E36160 /* LiquidContainer in Frameworks */ = {isa = PBXBuildFile; productRef = 23C78D7FA2CE964926605789 /* LiquidContainer */; };
 		EA8C8EBB0A333AED04BD7451 /* BeverageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAD12614A013A9506F4C6D1D /* BeverageManager.swift */; };
 		ED661C016DCDD640834AB69F /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AAC833F35DCB98520DB8FA3 /* Models.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		B4B11CCCD24ABABC1BC11E65 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 199FC73A0B62B6CE0CB5BE59 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 39037D8D29285BCDAA510617;
+			remoteInfo = Koffee;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		04C0BE035BA09901B793C38E /* EditableTimePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditableTimePicker.swift; sourceTree = "<group>"; };
 		06378277A5B95E4C9C311DEA /* Koffee.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Koffee.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2B66235F2B73372234391FDA /* CaffeineCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaffeineCalculator.swift; sourceTree = "<group>"; };
+		4D0128F347C550BBCC33BF7E /* KoffeeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KoffeeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6DDE676D391102A037E2B315 /* config.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = config.json; sourceTree = "<group>"; };
+		99A40880453F61A0EA03D788 /* InputTypingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputTypingTests.swift; sourceTree = "<group>"; };
 		9AAC833F35DCB98520DB8FA3 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		ABB4A5A37E405E0B83BA4C45 /* LiquidContainer */ = {isa = PBXFileReference; lastKnownFileType = folder; name = LiquidContainer; path = LiquidContainer; sourceTree = SOURCE_ROOT; };
 		AEE29E5F6955FCD217F979DA /* beverages.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = beverages.json; sourceTree = "<group>"; };
 		B827BC801C03CBC40FA0E3C3 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		CBD54509E672E4950D2F2508 /* ConfigManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigManager.swift; sourceTree = "<group>"; };
 		DE1CCCF6A9602672053A5029 /* CaffeineMeterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaffeineMeterView.swift; sourceTree = "<group>"; };
+		E1D054A23F9C2BB5C63A725A /* KoffeeUIInteractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KoffeeUIInteractionTests.swift; sourceTree = "<group>"; };
 		EAD12614A013A9506F4C6D1D /* BeverageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BeverageManager.swift; sourceTree = "<group>"; };
 		F99F13FA86A4F2647EF46C1A /* Design.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		36808008F6A5FDC6A13BA12F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B5284440730BECD4C4E36160 /* LiquidContainer in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		4CF060C615F6448DEF3479CB /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -45,10 +71,20 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		25AEF6A96EFF12F36A509927 /* KoffeeTests */ = {
+			isa = PBXGroup;
+			children = (
+				99A40880453F61A0EA03D788 /* InputTypingTests.swift */,
+				E1D054A23F9C2BB5C63A725A /* KoffeeUIInteractionTests.swift */,
+			);
+			path = KoffeeTests;
+			sourceTree = "<group>";
+		};
 		2B499B1FE6C7FDCFEEA3FAB0 /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				06378277A5B95E4C9C311DEA /* Koffee.app */,
+				4D0128F347C550BBCC33BF7E /* KoffeeTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -63,6 +99,7 @@
 				6DDE676D391102A037E2B315 /* config.json */,
 				CBD54509E672E4950D2F2508 /* ConfigManager.swift */,
 				F99F13FA86A4F2647EF46C1A /* Design.swift */,
+				04C0BE035BA09901B793C38E /* EditableTimePicker.swift */,
 				B827BC801C03CBC40FA0E3C3 /* main.swift */,
 				9AAC833F35DCB98520DB8FA3 /* Models.swift */,
 			);
@@ -73,6 +110,7 @@
 			isa = PBXGroup;
 			children = (
 				3A02AAE087224AA7975BDB97 /* Koffee */,
+				25AEF6A96EFF12F36A509927 /* KoffeeTests */,
 				C1A645DF1ECD241794286A23 /* Packages */,
 				2B499B1FE6C7FDCFEEA3FAB0 /* Products */,
 			);
@@ -109,6 +147,26 @@
 			productReference = 06378277A5B95E4C9C311DEA /* Koffee.app */;
 			productType = "com.apple.product-type.application";
 		};
+		81D62AFD9B5A12645BAA9975 /* KoffeeTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F694E7A45C800E27BBCD540B /* Build configuration list for PBXNativeTarget "KoffeeTests" */;
+			buildPhases = (
+				863657D3D41F071FC9CB758C /* Sources */,
+				36808008F6A5FDC6A13BA12F /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D04B2D168FD6E2CE464819CD /* PBXTargetDependency */,
+			);
+			name = KoffeeTests;
+			packageProductDependencies = (
+				23C78D7FA2CE964926605789 /* LiquidContainer */,
+			);
+			productName = KoffeeTests;
+			productReference = 4D0128F347C550BBCC33BF7E /* KoffeeTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -138,6 +196,7 @@
 			projectRoot = "";
 			targets = (
 				39037D8D29285BCDAA510617 /* Koffee */,
+				81D62AFD9B5A12645BAA9975 /* KoffeeTests */,
 			);
 		};
 /* End PBXProject section */
@@ -164,12 +223,30 @@
 				5EBC1529330648E1A4B7D32A /* CaffeineMeterView.swift in Sources */,
 				51127499C6C678181549D11A /* ConfigManager.swift in Sources */,
 				430DF6D927B801F31C9CDF91 /* Design.swift in Sources */,
+				A73D2EAB64C9E2129E7561CF /* EditableTimePicker.swift in Sources */,
 				ED661C016DCDD640834AB69F /* Models.swift in Sources */,
 				7F65043F0D5695188B559561 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		863657D3D41F071FC9CB758C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				38147D2723F080B6C8F5E7BF /* InputTypingTests.swift in Sources */,
+				6C93B754AD8A74E031C5223A /* KoffeeUIInteractionTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D04B2D168FD6E2CE464819CD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 39037D8D29285BCDAA510617 /* Koffee */;
+			targetProxy = B4B11CCCD24ABABC1BC11E65 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		191653A5C61311BB86230481 /* Release */ = {
@@ -251,6 +328,25 @@
 			};
 			name = Debug;
 		};
+		95A1CEE6EBCC3E5BB148A7F4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.koffee.KoffeeTests;
+				PRODUCT_MODULE_NAME = KoffeeTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Koffee.app/Contents/MacOS/Koffee";
+				WRAPPER_EXTENSION = xctest;
+			};
+			name = Debug;
+		};
 		970A1A854A9587BD5AD48286 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -265,6 +361,25 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.koffee.Koffee;
 				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		C0485CFCA87D046795059BB1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.koffee.KoffeeTests;
+				PRODUCT_MODULE_NAME = KoffeeTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Koffee.app/Contents/MacOS/Koffee";
+				WRAPPER_EXTENSION = xctest;
 			};
 			name = Release;
 		};
@@ -349,6 +464,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		F694E7A45C800E27BBCD540B /* Build configuration list for PBXNativeTarget "KoffeeTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				95A1CEE6EBCC3E5BB148A7F4 /* Debug */,
+				C0485CFCA87D046795059BB1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		FFCAD2C3040B06F084BB9EF3 /* Build configuration list for PBXProject "Koffee" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -368,6 +492,10 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		23C78D7FA2CE964926605789 /* LiquidContainer */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = LiquidContainer;
+		};
 		37552910EB30764730AF2F2E /* LiquidContainer */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = LiquidContainer;

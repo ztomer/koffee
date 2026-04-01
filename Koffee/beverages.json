@@ -1,6 +1,6 @@
 {
   "beverages": [
-    {"name": "Espresso (1 shot, 30ml)", "caffeine_mg": 63, "category": "Coffee", "icon": "☕"},
+    {"name": "Espresso (30ml)", "caffeine_mg": 63, "category": "Coffee", "icon": "☕"},
     {"name": "Brewed Coffee (240ml)", "caffeine_mg": 95, "category": "Coffee", "icon": "☕"},
     {"name": "Instant Coffee (240ml)", "caffeine_mg": 62, "category": "Coffee", "icon": "☕"},
     {"name": "Cold Brew (240ml)", "caffeine_mg": 200, "category": "Coffee", "icon": "☕"},

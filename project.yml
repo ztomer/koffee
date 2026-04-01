@@ -43,3 +43,22 @@ targets:
         INFOPLIST_KEY_NSHighResolutionCapable: "YES"
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
         COMBINE_HIDPI_IMAGES: "YES"
+
+  KoffeeTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: KoffeeTests
+        excludes:
+          - "*.xcodeproj"
+          - "*.xcworkspace"
+    dependencies:
+      - target: Koffee
+      - package: LiquidContainer
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: "YES"
+        PRODUCT_MODULE_NAME: "KoffeeTests"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Koffee.app/Contents/MacOS/Koffee"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        WRAPPER_EXTENSION: "xctest"

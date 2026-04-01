@@ -108,9 +108,9 @@ public struct LiquidPhysics {
     // MARK: - Dose Animation
     public static let fillLevelAnimationDuration: Double = 0.8
     public static let fillLevelAnimationEasing: Double = 0.3
-    public static let fillLevelSpring: CGFloat = 0.15
+    public static let fillLevelSpring: CGFloat = 0.075
     public static let fillLevelDamping: CGFloat = 0.75
-    public static let fillChangeSloshMultiplier: CGFloat = 20.0
+    public static let fillChangeSloshMultiplier: CGFloat = 10.0
     
     // MARK: - Slosh Effect
     public static let sloshImpulseStrength: CGFloat = 15.0
@@ -121,6 +121,57 @@ public struct LiquidPhysics {
     public static let pourWaveStrength: CGFloat = 25.0
     public static let pourOscillationCount: Int = 3
     public static let settleWaveStrength: CGFloat = 8.0
+    
+    // MARK: - Advanced Physical Effects
+    
+    // 1. Viscosity - thicker liquids resist flow more (affects wave damping, surface tension interaction)
+    public static let viscosityBase: CGFloat = 0.15
+    public static let viscosityWaveDamping: CGFloat = 0.3  // viscosity interacts with waves
+    public static let viscositySurfaceTension: CGFloat = 0.2  // viscosity-surface tension coupling
+    public static let viscosityTemperatureCoeff: CGFloat = 0.02  // viscosity decreases with temperature
+    
+    // 2. Surface Tension - creates meniscus, affects bubble behavior, interacts with viscosity
+    public static let surfaceTensionStrength: CGFloat = 0.08
+    public static let surfaceTensionMeniscusHeight: CGFloat = 3.0
+    public static let surfaceTensionBubbleInteraction: CGFloat = 0.15  // surface tension affects bubble size/behavior
+    public static let surfaceTensionViscosityCoupling: CGFloat = 0.12  // viscosity modulates surface tension effect
+    
+    // 3. Thermal Expansion - hot liquid expands, affects density and flow
+    public static let thermalExpansionCoeff: CGFloat = 0.0003  // per degree
+    public static let thermalExpansionFillEffect: CGFloat = 0.02  // how much fill level changes with temp
+    public static let thermalExpansionViscosity: CGFloat = 0.08  // heat affects viscosity
+    public static let thermalExpansionBubbleGrowth: CGFloat = 0.05  // hotter = more bubbles
+    
+    // 4. Bubble Coalescence - bubbles merging, affected by viscosity, surface tension
+    public static let coalescenceEnabled: Bool = true
+    public static let coalescenceThreshold: CGFloat = 8.0  // distance to merge
+    public static let coalescenceRate: CGFloat = 0.02
+    public static let coalescenceViscosityFactor: CGFloat = 0.3  // higher viscosity = slower coalescence
+    public static let coalescenceSurfaceTensionFactor: CGFloat = 0.25  // surface tension promotes coalescence
+    public static let coalescenceThermalFactor: CGFloat = 0.15  // heat promotes bubble activity
+    
+    // 5. Vortex Shedding - turbulent patterns when pouring/moving
+    public static let vortexEnabled: Bool = true
+    public static let vortexSheddingFrequency: Double = 2.5
+    public static let vortexStrength: CGFloat = 0.1
+    public static let vortexVelocityThreshold: CGFloat = 5.0  // minimum velocity for vortex
+    public static let vortexViscosityDamping: CGFloat = 0.2  // viscosity suppresses vortices
+    public static let vortexSurfaceTensionStabilization: CGFloat = 0.1  // surface tension stabilizes
+    
+    // 6. Centripetal Effects - rotation/inertia when swirling
+    public static let centripetalEnabled: Bool = true
+    public static let centripetalStrength: CGFloat = 0.15
+    public static let centripetalDecay: CGFloat = 0.95
+    public static let centripetalViscosityDrag: CGFloat = 0.18  // viscosity slows rotation
+    public static let centripetalVortexCoupling: CGFloat = 0.12  // centripetal affects vortex
+    
+    // 7. Foam Collapse - crema/foam settling over time
+    public static let foamCollapseEnabled: Bool = true
+    public static let foamCollapseRate: CGFloat = 0.005
+    public static let foamCollapseViscosity: CGFloat = 0.25  // higher viscosity = slower collapse
+    public static let foamCollapseSurfaceTension: CGFloat = 0.15  // surface tension affects foam stability
+    public static let foamCollapseThermal: CGFloat = 0.1  // heat accelerates collapse
+    public static let foamCollapseVortexDisturb: CGFloat = 0.08  // vortices disturb foam
 }
 
 public struct LiquidPhysicsConfig: Codable {

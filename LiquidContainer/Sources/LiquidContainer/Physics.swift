@@ -58,6 +58,15 @@ public final class LiquidPhysicsEngine: Observable {
     public var pendingSlosh: CGFloat? = nil
     public var sloshDirection: CGFloat = 1.0
     
+    // Advanced physics state
+    public var liquidTemperature: CGFloat = 0.5  // 0 = cold, 1 = hot (affects viscosity, expansion, bubble activity)
+    public var viscosity: CGFloat = 0.15
+    public var surfaceTension: CGFloat = 0.08
+    public var foamStability: CGFloat = 1.0  // 1 = stable, 0 = collapsed
+    public var rotationVelocity: CGFloat = 0  // centripetal rotation
+    public var vortexIntensity: CGFloat = 0  // vortex shedding activity
+    public var bubbleCoalescenceRate: CGFloat = 0.02
+    
     private var _internalTime: Double = 0
     public private(set) var layerStates: [LayerWaveState] = []
     private var layerCount: Int = 1
@@ -177,13 +186,33 @@ public final class LiquidPhysicsEngine: Observable {
         for layerIndex in 0..<layerStates.count {
             let layerDamping = layerStates[layerIndex].waveDamping
             
+            // Bidirectional angle coupling
+            var angleCoupling: CGFloat = 0
+            if layerIndex > 0 {
+                angleCoupling += layerStates[layerIndex - 1].surfaceAngle * 0.15
+            }
+            if layerIndex < layerStates.count - 1 {
+                angleCoupling -= layerStates[layerIndex + 1].surfaceAngle * 0.08
+            }
+            
             layerStates[layerIndex].angleVelocity += accel * LiquidPhysics.tiltResponse * LiquidPhysics.waveExcitationMultiplier * layerDamping
+            layerStates[layerIndex].angleVelocity += angleCoupling * 0.1
             layerStates[layerIndex].angleVelocity -= layerStates[layerIndex].surfaceAngle * LiquidPhysics.springStrength * LiquidPhysics.waveSpringMultiplier
             layerStates[layerIndex].angleVelocity *= LiquidPhysics.velocityDamping * layerDamping
             layerStates[layerIndex].surfaceAngle += layerStates[layerIndex].angleVelocity * LiquidPhysics.angleInertia
             layerStates[layerIndex].surfaceAngle *= LiquidPhysics.angleDecay * layerDamping
             
+            // Bidirectional displacement coupling
+            var dispCoupling: CGFloat = 0
+            if layerIndex > 0 {
+                dispCoupling += layerStates[layerIndex - 1].displacement * 0.12
+            }
+            if layerIndex < layerStates.count - 1 {
+                dispCoupling -= layerStates[layerIndex + 1].displacement * 0.06
+            }
+            
             layerStates[layerIndex].displacementVelocity += containerVelocityX * LiquidPhysics.displacementCoupling * layerDamping
+            layerStates[layerIndex].displacementVelocity += dispCoupling * 0.05
             layerStates[layerIndex].displacementVelocity -= layerStates[layerIndex].displacement * LiquidPhysics.springStrength * LiquidPhysics.displacementSpring
             layerStates[layerIndex].displacementVelocity *= LiquidPhysics.velocityDamping * layerDamping
             layerStates[layerIndex].displacement += layerStates[layerIndex].displacementVelocity * LiquidPhysics.angleInertia
@@ -193,8 +222,23 @@ public final class LiquidPhysicsEngine: Observable {
                 let coupling = i < LiquidPhysics.waveCoupling.count ? LiquidPhysics.waveCoupling[i] : 0.1
                 
                 var waveAccel = accel
+                
+                // Bidirectional layer coupling - waves propagate both upward and downward
                 if layerIndex > 0 {
+                    // Downward coupling from layer above
                     waveAccel += layerStates[layerIndex - 1].surfaceAngle * waveCoupling * reflectionRatio * (1.0 - CGFloat(layerIndex) * 0.2)
+                }
+                if layerIndex < layerStates.count - 1 {
+                    // Upward coupling from layer below
+                    waveAccel -= layerStates[layerIndex + 1].surfaceAngle * waveCoupling * reflectionRatio * 0.3
+                }
+                
+                // Cross-layer displacement influence
+                if layerIndex > 0 {
+                    waveAccel += layerStates[layerIndex - 1].displacement * waveCoupling * 0.1
+                }
+                if layerIndex < layerStates.count - 1 {
+                    waveAccel -= layerStates[layerIndex + 1].displacement * waveCoupling * 0.08
                 }
                 
                 layerStates[layerIndex].waves[i].velocity += waveAccel * LiquidPhysics.tiltResponse * coupling * layerDamping
@@ -210,6 +254,8 @@ public final class LiquidPhysicsEngine: Observable {
                 }
             }
         }
+        
+        updateAdvancedPhysicsEffects(accel: accel, deltaTime: deltaTime)
         
         logFrame += 1
     }
@@ -229,6 +275,48 @@ public final class LiquidPhysicsEngine: Observable {
                 layerStates[index].waves[0].velocity += direction * strength * layerMultiplier * 0.5
                 layerStates[index].waves[1].velocity += direction * strength * layerMultiplier * 0.3
             }
+        }
+    }
+    
+    private func updateAdvancedPhysicsEffects(accel: CGFloat, deltaTime: Double) {
+        let baseViscosity = LiquidPhysics.viscosityBase
+        let viscosityTempEffect = (1.0 - liquidTemperature) * LiquidPhysics.viscosityTemperatureCoeff
+        viscosity = baseViscosity + viscosityTempEffect
+        
+        surfaceTension = LiquidPhysics.surfaceTensionStrength * (1.0 + viscosity * LiquidPhysics.surfaceTensionViscosityCoupling)
+        
+        let accelMagnitude = abs(accel)
+        if accelMagnitude > LiquidPhysics.vortexVelocityThreshold && LiquidPhysics.vortexEnabled {
+            let vortexForce = (accelMagnitude - LiquidPhysics.vortexVelocityThreshold) * LiquidPhysics.vortexStrength
+            vortexIntensity = min(vortexIntensity + vortexForce, 1.0)
+            vortexIntensity *= (1.0 - LiquidPhysics.vortexViscosityDamping * viscosity)
+        } else {
+            vortexIntensity *= 0.98
+        }
+        
+        if LiquidPhysics.centripetalEnabled {
+            rotationVelocity += accel * LiquidPhysics.centripetalStrength * deltaTime
+            rotationVelocity *= LiquidPhysics.centripetalDecay
+            rotationVelocity *= (1.0 - LiquidPhysics.centripetalViscosityDrag * viscosity)
+        }
+        
+        let vortexCentripetalCoupling = vortexIntensity * LiquidPhysics.centripetalVortexCoupling
+        rotationVelocity += vortexCentripetalCoupling * 0.1
+        
+        if LiquidPhysics.coalescenceEnabled {
+            let tempCoalescence = liquidTemperature * LiquidPhysics.coalescenceThermalFactor
+            let visCoalescence = (1.0 - viscosity * LiquidPhysics.coalescenceViscosityFactor)
+            let stCoalescence = surfaceTension * LiquidPhysics.coalescenceSurfaceTensionFactor
+            bubbleCoalescenceRate = LiquidPhysics.coalescenceRate * (1.0 + tempCoalescence + stCoalescence) * visCoalescence
+        }
+        
+        if LiquidPhysics.foamCollapseEnabled {
+            let visCollapse = 1.0 - viscosity * LiquidPhysics.foamCollapseViscosity
+            let stCollapse = surfaceTension * LiquidPhysics.foamCollapseSurfaceTension
+            let thermalCollapse = (1.0 - liquidTemperature) * LiquidPhysics.foamCollapseThermal
+            let vortexDisturb = vortexIntensity * LiquidPhysics.foamCollapseVortexDisturb
+            let collapseRate = LiquidPhysics.foamCollapseRate * (visCollapse + stCollapse + thermalCollapse + vortexDisturb)
+            foamStability = max(0, min(1.0, foamStability - collapseRate))
         }
     }
     
@@ -268,16 +356,20 @@ public final class LiquidPhysicsEngine: Observable {
         
         let t = _internalTime - Double(phaseDelay)
         
+        let visWaveDamping = 1.0 - viscosity * LiquidPhysics.viscosityWaveDamping
+        let effectiveLayerDamping = layerDamping * visWaveDamping
+        
         let angleEffect = -layerAngle * (normalizedX - 0.5) * LiquidPhysics.surfaceAngleEffect
         let displacementEffect = layerDisp * (normalizedX - 0.5) * LiquidPhysics.surfaceDisplacementEffect
         
-        let waveDrift = layerDisp * LiquidPhysics.surfaceWaveDriftFactor * cos(t * LiquidPhysics.surfaceWaveDriftFrequency) * layerDamping
+        let waveDrift = layerDisp * LiquidPhysics.surfaceWaveDriftFactor * cos(t * LiquidPhysics.surfaceWaveDriftFrequency) * effectiveLayerDamping
         
-        let waveAmplitude = localWaves.reduce(CGFloat(0)) { $0 + abs($1.amplitude) }
-        let curvature = waveAmplitude * LiquidPhysics.surfaceCurvatureFactor * layerDamping
+        let waveAmplitude = localWaves.reduce(CGFloat(0)) { $0 + $1.amplitude }
+        let curvature = waveAmplitude * LiquidPhysics.surfaceCurvatureFactor * effectiveLayerDamping
         
-        let curvatureEffect = curvature * sin(normalizedX * .pi * 2.0 + t * 2.0)
-        let nonlinearity = waveAmplitude * LiquidPhysics.surfaceNonlinearityFactor * layerDamping * sin(normalizedX * .pi * 3.0 + t * 1.5)
+        let stWaveEffect = surfaceTension * LiquidPhysics.surfaceTensionBubbleInteraction
+        let curvatureEffect = (curvature + stWaveEffect * waveAmplitude * 0.1) * sin(normalizedX * .pi * 2.0 + t * 2.0)
+        let nonlinearity = waveAmplitude * LiquidPhysics.surfaceNonlinearityFactor * effectiveLayerDamping * sin(normalizedX * .pi * 3.0 + t * 1.5)
         
         var waveEffect: CGFloat = 0
         
@@ -287,15 +379,30 @@ public final class LiquidPhysicsEngine: Observable {
             let speedMult = i < LiquidPhysics.waveSpeedMultipliers.count ? LiquidPhysics.waveSpeedMultipliers[i] : 0.8 + Double(i) * 0.3
             let depthFactor = i < LiquidPhysics.waveDepthFactors.count ? LiquidPhysics.waveDepthFactors[i] : 1.0 - CGFloat(i) * 0.15
             
-            let wave = sin(x * freq + t * speedMult + phaseOffset) * localWaves[i].amplitude * LiquidPhysics.surfaceWaveEffectFactor * depthFactor * layerDamping
+            let wave = sin(x * freq + t * speedMult + phaseOffset) * localWaves[i].amplitude * LiquidPhysics.surfaceWaveEffectFactor * depthFactor * effectiveLayerDamping
             waveEffect += wave
         }
         
-        let rippleDamping = layerDamping * LiquidPhysics.surfaceRippleDampingFactor
+        let rippleDamping = effectiveLayerDamping * LiquidPhysics.surfaceRippleDampingFactor
         let ripple1 = sin(x * LiquidPhysics.waveFrequency1 + t * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1 * LiquidPhysics.surfaceRippleEffectFactor * rippleDamping
         let ripple2 = sin(x * LiquidPhysics.waveFrequency2 - t * LiquidPhysics.waveSpeed2) * LiquidPhysics.waveAmplitude2 * LiquidPhysics.surfaceRippleEffectFactor * rippleDamping
         
-        let total = angleEffect + displacementEffect + waveDrift + curvatureEffect + nonlinearity + waveEffect + ripple1 + ripple2
+        var vortexEffect: CGFloat = 0
+        if LiquidPhysics.vortexEnabled && vortexIntensity > 0.01 {
+            let vortexFreq = LiquidPhysics.vortexSheddingFrequency
+            let vortexPhase = _internalTime * vortexFreq
+            vortexEffect = sin(normalizedX * .pi * 4.0 + vortexPhase) * vortexIntensity * LiquidPhysics.vortexStrength * (1.0 - surfaceTension * LiquidPhysics.vortexSurfaceTensionStabilization)
+        }
+        
+        var centripetalEffect: CGFloat = 0
+        if LiquidPhysics.centripetalEnabled && abs(rotationVelocity) > 0.01 {
+            let rotPhase = normalizedX * .pi * 2.0 + _internalTime * 3.0
+            centripetalEffect = sin(rotPhase) * rotationVelocity * LiquidPhysics.centripetalStrength * (1.0 - viscosity * LiquidPhysics.centripetalViscosityDrag)
+        }
+        
+        let foamEffect = (1.0 - foamStability) * LiquidPhysics.surfaceTensionMeniscusHeight * sin(normalizedX * .pi * 2.0) * 0.5
+        
+        let total = angleEffect + displacementEffect + waveDrift + curvatureEffect + nonlinearity + waveEffect + ripple1 + ripple2 + vortexEffect + centripetalEffect + foamEffect
         
         return total
     }
@@ -314,7 +421,7 @@ public final class LiquidPhysicsEngine: Observable {
         let angleEffect = -baseAngle * (normalizedX - 0.5) * 1.5
         let displacementEffect = baseDisplacement * (normalizedX - 0.5) * 3.0
         
-        let waveAmplitude = abs(waves[0].amplitude) + abs(waves[1].amplitude) + abs(waves[2].amplitude)
+        let waveAmplitude = waves[0].amplitude + waves[1].amplitude + waves[2].amplitude
         let bottomWave = waveAmplitude * bottomDamping * sin(normalizedX * .pi * 2.0 + t * 1.5 - bottomPhaseLag)
         
         let rippleBottom = sin(x * LiquidPhysics.waveFrequency1 + t * LiquidPhysics.waveSpeed1) * LiquidPhysics.waveAmplitude1 * 0.15
@@ -330,6 +437,13 @@ public final class LiquidPhysicsEngine: Observable {
         containerAccelX = 0
         containerVelocityX = 0
         _internalTime = 0
+        liquidTemperature = 0.5
+        viscosity = LiquidPhysics.viscosityBase
+        surfaceTension = LiquidPhysics.surfaceTensionStrength
+        foamStability = 1.0
+        rotationVelocity = 0
+        vortexIntensity = 0
+        bubbleCoalescenceRate = LiquidPhysics.coalescenceRate
         for i in 0..<waves.count {
             waves[i] = WaveState()
         }
